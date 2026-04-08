@@ -1,0 +1,10 @@
+{
+  "id": "about",
+  "slug": "about",
+  "title": "About Dragonfly",
+  "contentType": "pages",
+  "date": null,
+  "excerpt": "A developer blog following the build of Invert — a database-less, adapter-driven content layer.",
+  "author": null,
+  "body": "# About Dragonfly\n\nDragonfly is a developer blog documenting the design and build of [Invert](https://github.com/jazzsequence/Invert) — a database-less, adapter-driven content presentation layer built on Astro.\n\n## The name\n\nDragonfly is an aerial hammock position. From standing, you extend one leg back behind you — an arabesque line — then hook that leg up and around the pole, landing in an asymmetrical hold: one leg high on the fabric, the other long beneath you. It's a transitional shape. You can flow from dragonfly into an inversion, drop into a leg hitch, or find your way to something else entirely. It's a place you pass through on the way to somewhere harder.\n\nInvert — the framework — is named after the inversion itself. Dragonfly is where you go before you get there.\n\n## What you'll find here\n\n- Build logs and decision write-ups from the Invert project\n- Notes on MCP (Model Context Protocol) integration and edge deployments\n- Thoughts on content architecture, static sites, and AI tooling\n\n## Meta\n\nDragonfly is built on Invert and deployed to Cloudflare Pages. Content is managed via the Invert edge MCP server."
+}
