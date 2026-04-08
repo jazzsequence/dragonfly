@@ -1,12 +1,16 @@
 {
 	// Cloudflare Pages + Workers configuration for Dragonfly (Invert test site).
-	// Used by: `wrangler pages dev dist/` for local preview, and CI/CD for deployment.
+	// Used by the @astrojs/cloudflare adapter during `astro build` and `wrangler pages dev`.
+	//
+	// NOTE: pages_build_output_dir is intentionally omitted here. The @astrojs/cloudflare
+	// adapter generates its own prerender worker config during build; including
+	// pages_build_output_dir causes Wrangler to reject the ASSETS binding it needs.
+	// Cloudflare Pages CI/CD (triggered by git push) handles deployment automatically.
 	"compatibility_date": "2026-04-07",
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
 	"name": "dragonfly",
-	"pages_build_output_dir": "./dist",
 	// KV namespace for content storage.
 	// Created with: npx wrangler kv namespace create CONTENT
 	"kv_namespaces": [

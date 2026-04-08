@@ -17,7 +17,7 @@ export interface InvertConfig {
 
 export const invertConfig: InvertConfig = {
   siteName: 'Dragonfly',
-  siteUrl: 'https://dragonfly-6tp.pages.dev',
+  siteUrl: 'https://dragonfly.jazzsequence.com',
 
   adapters: [
     new JsonAdapter({ contentDir: join(root, 'content') }),

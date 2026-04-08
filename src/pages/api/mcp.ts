@@ -1,5 +1,5 @@
 /**
- * functions/api/mcp.ts — Cloudflare Pages Function
+ * src/pages/api/mcp.ts — Astro API Route (replaces functions/api/mcp.ts)
  *
  * Exposes Invert content via the Model Context Protocol (MCP) over HTTP.
  * Accessible at /api/mcp on the deployed Cloudflare Pages site.
@@ -7,24 +7,25 @@
  * Write model
  * -----------
  * Writes go to Cloudflare KV immediately (content is readable at once), then
- * fire an async GitHub API commit so the git repo stays in sync. GitHub Actions
- * rebuilds the static site when the commit lands (~1-2 min delay for the web
- * pages, zero delay for MCP reads).
+ * fire an async GitHub API commit so the git repo stays in sync.
  *
  * Read model
  * ----------
  * Reads merge the KV index with the static manifest (dist/_api/content.json).
  * KV wins for any item that exists in both (KV always has the freshest version).
  *
- * Required environment variables (set in Cloudflare Pages dashboard or wrangler.toml):
+ * Required environment variables (set in Cloudflare Pages dashboard or wrangler.jsonc):
  *   GITHUB_TOKEN   GitHub PAT with repo write access (Contents: read & write)
  *   GITHUB_REPO    e.g. "jazzsequence/dragonfly"
  *   GITHUB_BRANCH  default "main"
  *
  * Required Cloudflare bindings (wrangler.jsonc):
  *   CONTENT  KV namespace  (npx wrangler kv namespace create CONTENT)
- *   ASSETS   Pages asset binding (automatic)
  */
+
+export const prerender = false;
+
+import type { APIContext } from 'astro';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,7 +66,6 @@ interface KVNamespace {
 }
 
 interface Env {
-  ASSETS: { fetch: (req: Request | string) => Promise<Response> };
   CONTENT: KVNamespace;
   GITHUB_TOKEN?: string;
   GITHUB_REPO?: string;
@@ -137,10 +137,10 @@ async function kvDeleteItem(env: Env, contentType: string, slug: string): Promis
 // Static manifest fallback
 // ---------------------------------------------------------------------------
 
-async function getStaticManifest(env: Env, requestUrl: string): Promise<ContentItem[]> {
+async function getStaticManifest(requestUrl: string): Promise<ContentItem[]> {
   try {
     const origin = new URL(requestUrl).origin;
-    const res = await env.ASSETS.fetch(`${origin}/_api/content.json`);
+    const res = await fetch(`${origin}/_api/content.json`);
     if (!res.ok) return [];
     const manifest = (await res.json()) as StaticManifest;
     return manifest.items ?? [];
@@ -156,19 +156,15 @@ async function getStaticManifest(env: Env, requestUrl: string): Promise<ContentI
 async function getAllItems(env: Env, requestUrl: string): Promise<ContentItem[]> {
   const [kvIndex, staticItems] = await Promise.all([
     kvGetIndex(env),
-    getStaticManifest(env, requestUrl),
+    getStaticManifest(requestUrl),
   ]);
 
-  // Start with static items, then layer KV on top
   const merged = new Map<string, ContentItem>();
   for (const item of staticItems) {
     merged.set(`${item.contentType}:${item.slug}`, item);
   }
-  // KV index entries mark items that exist in KV; fetch full items for those
-  // that overlap with static, and add new KV-only items as lightweight stubs.
   for (const entry of kvIndex) {
     const key = `${entry.type}:${entry.slug}`;
-    // Use a lightweight stub so invert_list is fast — invert_get fetches the full item
     merged.set(key, {
       id: entry.slug,
       slug: entry.slug,
@@ -183,7 +179,7 @@ async function getAllItems(env: Env, requestUrl: string): Promise<ContentItem[]>
 }
 
 // ---------------------------------------------------------------------------
-// GitHub API write-back (fire-and-forget)
+// GitHub API write-back (fire-and-forget via waitUntil)
 // ---------------------------------------------------------------------------
 
 function toBase64(str: string): string {
@@ -212,7 +208,6 @@ async function githubCommit(
     Accept: 'application/vnd.github+json',
   };
 
-  // Fetch current SHA (needed for update/delete; absent for new files)
   let sha: string | undefined;
   try {
     const res = await fetch(apiUrl, { headers });
@@ -221,11 +216,11 @@ async function githubCommit(
       sha = data.sha;
     }
   } catch {
-    // File may not exist yet — that's fine for creates
+    // File may not exist yet
   }
 
   if (action === 'delete') {
-    if (!sha) return; // Nothing to delete
+    if (!sha) return;
     await fetch(apiUrl, {
       method: 'DELETE',
       headers,
@@ -238,7 +233,6 @@ async function githubCommit(
     return;
   }
 
-  // Upsert
   await fetch(apiUrl, {
     method: 'PUT',
     headers,
@@ -271,10 +265,9 @@ async function toolGet(
   requestUrl: string,
   args: { contentType: string; slug: string }
 ): Promise<ContentItem | null> {
-  // KV first (full item), then static manifest
   const fromKV = await kvGetItem(env, args.contentType, args.slug);
   if (fromKV) return fromKV;
-  const staticItems = await getStaticManifest(env, requestUrl);
+  const staticItems = await getStaticManifest(requestUrl);
   return staticItems.find((i) => i.contentType === args.contentType && i.slug === args.slug) ?? null;
 }
 
@@ -450,7 +443,7 @@ const TOOLS = [
 ];
 
 // ---------------------------------------------------------------------------
-// JSON-RPC dispatcher
+// JSON-RPC helpers
 // ---------------------------------------------------------------------------
 
 function ok(id: unknown, result: unknown): Response {
@@ -465,6 +458,10 @@ function text(content: unknown): { content: Array<{ type: string; text: string }
   return { content: [{ type: 'text', text: JSON.stringify(content, null, 2) }] };
 }
 
+// ---------------------------------------------------------------------------
+// JSON-RPC dispatcher
+// ---------------------------------------------------------------------------
+
 async function dispatch(
   msg: { method: string; params?: Record<string, unknown>; id?: unknown },
   env: Env,
@@ -472,7 +469,7 @@ async function dispatch(
   waitUntil: (p: Promise<unknown>) => void
 ): Promise<Response> {
   const { method, params = {}, id } = msg;
-  const siteName = env.SITE_NAME ?? 'dragonfly';
+  const siteName = env.SITE_NAME ?? 'invert';
 
   switch (method) {
     case 'initialize':
@@ -536,7 +533,7 @@ async function dispatch(
 }
 
 // ---------------------------------------------------------------------------
-// Pages Function entry point
+// CORS headers
 // ---------------------------------------------------------------------------
 
 const CORS = {
@@ -551,24 +548,30 @@ function withCors(res: Response): Response {
   return new Response(res.body, { status: res.status, headers });
 }
 
-export async function onRequest(context: { request: Request; env: Env; waitUntil: (p: Promise<unknown>) => void }): Promise<Response> {
-  const { request, env, waitUntil } = context;
-  const siteName = env.SITE_NAME ?? 'dragonfly';
+// ---------------------------------------------------------------------------
+// Astro API route handlers
+// ---------------------------------------------------------------------------
 
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS });
+export async function OPTIONS(): Promise<Response> {
+  return new Response(null, { status: 204, headers: CORS });
+}
+
+export async function GET(): Promise<Response> {
+  // MCP Streamable HTTP spec: GET must return text/event-stream or 405.
+  // We don't support server-initiated SSE, so return 405.
+  // Humans can use /api/mcp/info for the status JSON.
+  return withCors(new Response('Method Not Allowed', { status: 405 }));
+}
+
+export async function POST({ request, locals }: APIContext): Promise<Response> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const runtime = (locals as any).runtime as { env: Env; ctx: { waitUntil(p: Promise<unknown>): void } } | undefined;
+  if (!runtime) {
+    return withCors(err(null, -32603, 'Runtime not available — ensure Cloudflare adapter is configured'));
   }
 
-  if (request.method === 'GET') {
-    // MCP Streamable HTTP spec: GET must return text/event-stream or 405.
-    // We don't support server-initiated SSE, so return 405.
-    // Browsers/humans can use /api/mcp/info for the status JSON.
-    return withCors(new Response('Method Not Allowed', { status: 405 }));
-  }
-
-  if (request.method !== 'POST') {
-    return withCors(new Response('Method Not Allowed', { status: 405 }));
-  }
+  const env = runtime.env;
+  const waitUntil = (p: Promise<unknown>) => runtime.ctx.waitUntil(p);
 
   let body: unknown;
   try {
