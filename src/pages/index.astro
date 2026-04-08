@@ -3,51 +3,43 @@ import Base from '../layouts/Base.astro';
 import { getContentByType } from '../lib/content.ts';
 import { url } from '../lib/utils.ts';
 
+const posts = await getContentByType('posts');
 const docs = await getContentByType('docs');
+
+// Sort posts by date descending
+const sortedPosts = posts
+  .filter((p) => p.date)
+  .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime());
 ---
 
 <Base>
   <div class="hero">
-    <h1>Invert</h1>
-    <p class="tagline">A database-less, adapter-driven content presentation layer built on Astro.</p>
+    <h1>Dragonfly</h1>
+    <p class="tagline">Developer blog for the <a href="https://github.com/jazzsequence/Invert">Invert</a> project.</p>
   </div>
 
-  <div class="intro">
-    <p>
-      Invert is not a CMS. It's the thing that sits in front of your CMS — or in front of no CMS at all —
-      and renders content from any source. There is no admin panel. There is no database.
-      Content comes in as JSON or Markdown. Where that content comes from is not Invert's problem.
-      That's what <strong>adapters</strong> are for.
-    </p>
-    <p>
-      An adapter can read static JSON files from disk, parse Markdown from a local directory,
-      fetch from a WordPress REST API, pull from a GitHub repo, or receive structured input from an AI tool over MCP.
-      Multiple adapters run simultaneously — content merges from all sources.
-    </p>
-  </div>
-
-  <div class="concepts">
-    <div class="concept">
-      <h3>No database</h3>
-      <p>All content is JSON at rest or in transit. No ORM, no migrations, no connections.</p>
+  {sortedPosts.length > 0 ? (
+    <div class="posts">
+      <h2>Recent posts</h2>
+      <ul class="post-list">
+        {sortedPosts.map((post) => (
+          <li class="post-item">
+            <a href={url('posts/' + post.slug)}>{post.title}</a>
+            {post.date && <time class="post-date">{new Date(post.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</time>}
+            {post.excerpt && <p class="post-excerpt">{post.excerpt}</p>}
+          </li>
+        ))}
+      </ul>
     </div>
-    <div class="concept">
-      <h3>No admin panel</h3>
-      <p>Content is managed externally. Invert only reads and renders. The admin can be anything.</p>
+  ) : (
+    <div class="empty-state">
+      <p>No posts yet. Create the first one with <code>invert_create</code>.</p>
     </div>
-    <div class="concept">
-      <h3>Adapters are the integration point</h3>
-      <p>Each content source implements <code>InvertAdapter</code>. Swap them in and out in config.</p>
-    </div>
-    <div class="concept">
-      <h3>MCP is first-class</h3>
-      <p>An MCP server ships out of the box. AI tools can query and write content without a UI.</p>
-    </div>
-  </div>
+  )}
 
   {docs.length > 0 && (
     <div class="docs-toc">
-      <h2>Documentation</h2>
+      <h2>Invert docs</h2>
       <ul>
         {docs.map((doc) => (
           <li>
@@ -58,141 +50,61 @@ const docs = await getContentByType('docs');
       </ul>
     </div>
   )}
-
-  <div class="getting-started">
-    <h2>Getting started</h2>
-
-    <div class="gs-step">
-      <h3><span class="step-num">1</span> Use the template</h3>
-      <p>
-        Click <strong>Use this template</strong> on the
-        <a href="https://github.com/jazzsequence/invert">GitHub repo</a> to create your own repository,
-        then clone it locally.
-      </p>
-    </div>
-
-    <div class="gs-step">
-      <h3><span class="step-num">2</span> Install dependencies</h3>
-      <p>Requires Node.js &gt;= 22. If you use nvm:</p>
-      <pre><code>nvm use
-npm install</code></pre>
-    </div>
-
-    <div class="gs-step">
-      <h3><span class="step-num">3</span> Configure your site</h3>
-      <p>Edit <code>src/lib/config.ts</code> to set your site name, URL, and which adapters to use:</p>
-      <pre><code>{"export const invertConfig = {\n  siteName: 'My Site',\n  siteUrl: 'https://example.com',\n  adapters: [\n    new JsonAdapter({ contentDir: join(root, 'content') }),\n    new MarkdownAdapter({ source: 'local', contentDir: join(root, 'markdown') }),\n  ],\n};"}</code></pre>
-    </div>
-
-    <div class="gs-step">
-      <h3><span class="step-num">4</span> Add content</h3>
-      <p>
-        Drop <strong>JSON files</strong> into <code>content/[type]/[slug].json</code> or
-        <strong>Markdown files</strong> into <code>markdown/</code> with YAML frontmatter.
-        The directory name becomes the content type; the filename becomes the slug.
-      </p>
-      <pre><code>content/
-  posts/
-    my-post.json        → /posts/my-post
-markdown/
-  about.md              → /pages/about (if contentType: pages)</code></pre>
-    </div>
-
-    <div class="gs-step">
-      <h3><span class="step-num">5</span> Run the dev server</h3>
-      <pre><code>npm run dev</code></pre>
-      <p>Your site is live at <code>http://localhost:4321</code>. Content updates reload automatically.</p>
-    </div>
-
-    <div class="gs-step">
-      <h3><span class="step-num">6</span> Optionally: start the MCP server</h3>
-      <p>In a second terminal:</p>
-      <pre><code>npm run mcp</code></pre>
-      <p>
-        Connect it to Claude Desktop or any MCP client. AI tools can then list, search, create,
-        and update content items via the <code>invert_*</code> tools.
-        Write operations produce JSON files in <code>content/</code> and hot-reload into the dev server.
-      </p>
-    </div>
-
-    <div class="gs-step">
-      <h3><span class="step-num">7</span> Deploy</h3>
-      <p>
-        Run <code>npm run build</code> and deploy the <code>dist/</code> directory to any static host.
-        GitHub Pages and Cloudflare Pages are both supported out of the box —
-        see the <a href={url('docs/getting-started')}>Getting Started doc</a> for details.
-      </p>
-    </div>
-  </div>
 </Base>
 
 <style>
-  .hero { margin-bottom: 1.5rem; }
+  .hero { margin-bottom: 2rem; }
   .hero h1 { font-size: 3rem; margin: 0 0 0.5rem; }
+  .hero a { color: inherit; }
   .tagline { font-size: 1.2rem; color: #555; margin: 0; }
-  .intro { margin-bottom: 2.5rem; }
-  .intro p { font-size: 1.05rem; line-height: 1.7; color: #333; }
-  .concepts {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.25rem;
+
+  .posts { margin-bottom: 3rem; }
+  .posts h2 { font-size: 1.4rem; margin-bottom: 1rem; }
+  .post-list { list-style: none; padding: 0; margin: 0; }
+  .post-item {
+    padding: 1.25rem 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .post-item:last-child { border-bottom: none; }
+  .post-item a {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #0066cc;
+    text-decoration: none;
+  }
+  .post-item a:hover { text-decoration: underline; }
+  .post-date {
+    display: block;
+    font-size: 0.85rem;
+    color: #888;
+    margin-top: 0.2rem;
+  }
+  .post-excerpt {
+    margin: 0.4rem 0 0;
+    font-size: 0.95rem;
+    color: #444;
+    line-height: 1.5;
+  }
+
+  .empty-state {
+    padding: 2rem;
+    background: #f9f9f9;
+    border-radius: 6px;
+    color: #666;
     margin-bottom: 3rem;
   }
-  .concept {
-    border: 1px solid #e5e5e5;
-    border-radius: 6px;
-    padding: 1.25rem;
+  .empty-state code {
+    background: #eee;
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+    font-size: 0.9em;
   }
-  .concept h3 { margin: 0 0 0.5rem; font-size: 1rem; }
-  .concept p { margin: 0; font-size: 0.9rem; color: #555; line-height: 1.5; }
-  .concept code { font-size: 0.85em; background: #f5f5f5; padding: 0.1em 0.3em; border-radius: 3px; }
-  .docs-toc { margin-bottom: 2.5rem; }
+
   .docs-toc h2 { font-size: 1.4rem; margin-bottom: 0.75rem; }
   .docs-toc ul { list-style: none; padding: 0; margin: 0; }
   .docs-toc li { padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0; }
+  .docs-toc li:last-child { border-bottom: none; }
   .docs-toc a { text-decoration: none; color: #0066cc; font-weight: 500; }
   .docs-toc a:hover { text-decoration: underline; }
   .doc-excerpt { color: #888; font-size: 0.9rem; }
-  .getting-started h2 { font-size: 1.4rem; margin-bottom: 1.5rem; }
-  .gs-step {
-    border-left: 3px solid #e5e5e5;
-    padding-left: 1.25rem;
-    margin-bottom: 2rem;
-  }
-  .gs-step h3 {
-    font-size: 1rem;
-    margin: 0 0 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-  }
-  .step-num {
-    background: #1a1a1a;
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 700;
-    width: 1.4rem;
-    height: 1.4rem;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .gs-step p { margin: 0 0 0.75rem; font-size: 0.95rem; color: #444; line-height: 1.6; }
-  .gs-step p:last-child { margin-bottom: 0; }
-  .gs-step a { color: #0066cc; }
-  .gs-step pre {
-    background: #f5f5f5;
-    border-radius: 4px;
-    padding: 0.75rem 1rem;
-    margin: 0.5rem 0 0.75rem;
-    overflow-x: auto;
-  }
-  .gs-step code { font-size: 0.85rem; }
-  .gs-step p code {
-    background: #f5f5f5;
-    padding: 0.1em 0.4em;
-    border-radius: 3px;
-  }
 </style>
