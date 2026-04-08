@@ -1,10 +1,6 @@
 {
 	// Cloudflare Pages + Workers configuration for Dragonfly (Invert test site).
 	// Used by: `wrangler pages dev dist/` for local preview, and CI/CD for deployment.
-	//
-	// For static Cloudflare Pages deployment (no SSR), "main" is NOT needed.
-	// If you later switch to SSR mode (output: 'server' in astro.config.mjs),
-	// add: "main": "@astrojs/cloudflare/entrypoints/server"
 	"compatibility_date": "2026-04-07",
 	"compatibility_flags": ["nodejs_compat"],
 	"name": "dragonfly",
@@ -12,6 +8,15 @@
 		"directory": "./dist",
 		"binding": "ASSETS"
 	},
+	// KV namespace for content storage.
+	// Create with: npx wrangler kv namespace create CONTENT
+	// Then replace the id below with the output.
+	"kv_namespaces": [
+		{
+			"binding": "CONTENT",
+			"id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+		}
+	],
 	"observability": {
 		"enabled": true
 	}
