@@ -2,7 +2,9 @@
 	// Cloudflare Pages + Workers configuration for Dragonfly (Invert test site).
 	// Used by: `wrangler pages dev dist/` for local preview, and CI/CD for deployment.
 	"compatibility_date": "2026-04-07",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
 	"name": "dragonfly",
 	"assets": {
 		"directory": "./dist",
@@ -15,6 +17,10 @@
 		{
 			"binding": "CONTENT",
 			"id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+		},
+		{
+			"binding": "CONTENT",
+			"id": "3ff4b30e9860406593eaaa9b53f9de06"
 		}
 	],
 	"observability": {
