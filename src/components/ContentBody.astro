@@ -1,4 +1,7 @@
 ---
+import { remark } from 'remark';
+import remarkGfm from 'remark-gfm';
+import remarkHtml from 'remark-html';
 import type { InvertContent } from '../adapters/interface.ts';
 
 export interface Props {
@@ -6,6 +9,12 @@ export interface Props {
 }
 
 const { content } = Astro.props;
+
+// Always process body through remark so raw markdown is rendered as HTML.
+// Content already in HTML (from MarkdownAdapter) passes through safely.
+const processedBody = content.body
+  ? String(await remark().use(remarkGfm).use(remarkHtml, { sanitize: false }).process(content.body))
+  : '';
 ---
 
 <article class="content-body">
@@ -31,7 +40,7 @@ const { content } = Astro.props;
       </div>
     )}
   </header>
-  <div class="body" set:html={content.body} />
+  <div class="body" set:html={processedBody} />
 </article>
 
 <style>
