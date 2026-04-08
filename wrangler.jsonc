@@ -16,6 +16,7 @@
 		}
 	],
 	"vars": {
+		"SITE_NAME": "dragonfly",
 		"GITHUB_REPO": "jazzsequence/dragonfly",
 		"GITHUB_BRANCH": "main"
 	},

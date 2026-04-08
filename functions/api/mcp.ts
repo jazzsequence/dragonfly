@@ -70,6 +70,7 @@ interface Env {
   GITHUB_TOKEN?: string;
   GITHUB_REPO?: string;
   GITHUB_BRANCH?: string;
+  SITE_NAME?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -469,13 +470,14 @@ async function dispatch(
   requestUrl: string
 ): Promise<Response> {
   const { method, params = {}, id } = msg;
+  const siteName = env.SITE_NAME ?? 'dragonfly';
 
   switch (method) {
     case 'initialize':
       return ok(id, {
         protocolVersion: '2024-11-05',
         capabilities: { tools: {} },
-        serverInfo: { name: 'dragonfly', version: '0.1.0' },
+        serverInfo: { name: siteName, version: '0.1.0' },
       });
 
     case 'notifications/initialized':
@@ -549,6 +551,7 @@ function withCors(res: Response): Response {
 
 export async function onRequest(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
+  const siteName = env.SITE_NAME ?? 'dragonfly';
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS });
@@ -557,7 +560,7 @@ export async function onRequest(context: { request: Request; env: Env }): Promis
   if (request.method === 'GET') {
     return withCors(
       Response.json({
-        name: 'dragonfly',
+        name: siteName,
         version: '0.1.0',
         transport: 'http',
         tools: TOOLS.map((t) => t.name),
