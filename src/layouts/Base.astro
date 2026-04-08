@@ -47,7 +47,7 @@ const pageTitle = title ? `${title} — ${invertConfig.siteName}` : invertConfig
 </html>
 
 <style is:global>
-  header {
+  body > header {
     background: var(--color-header-bg);
     border-bottom: 1px solid var(--color-border);
     padding: 1rem var(--space-page);
@@ -55,8 +55,8 @@ const pageTitle = title ? `${title} — ${invertConfig.siteName}` : invertConfig
     align-items: center;
     gap: 2rem;
   }
-  header a { text-decoration: none; color: inherit; }
-  header .site-name {
+  body > header a { text-decoration: none; color: inherit; }
+  body > header .site-name {
     font-weight: 700;
     font-size: 1.25rem;
     font-family: var(--font-heading);
