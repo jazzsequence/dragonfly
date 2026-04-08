@@ -11,13 +11,8 @@
 		"binding": "ASSETS"
 	},
 	// KV namespace for content storage.
-	// Create with: npx wrangler kv namespace create CONTENT
-	// Then replace the id below with the output.
+	// Created with: npx wrangler kv namespace create CONTENT
 	"kv_namespaces": [
-		{
-			"binding": "CONTENT",
-			"id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
-		},
 		{
 			"binding": "CONTENT",
 			"id": "3ff4b30e9860406593eaaa9b53f9de06"
