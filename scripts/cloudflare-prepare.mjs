@@ -6,17 +6,18 @@
  *
  * The adapter generates:
  *   dist/client/   ← static assets
- *   dist/server/   ← Cloudflare Worker entry + chunks
+ *   dist/server/   ← Cloudflare Worker entry + chunks + virtual modules
  *
  * Cloudflare Pages expects:
  *   dist/          ← static assets at root
  *   dist/_worker.js
  *   dist/chunks/   ← worker chunks (imported by _worker.js)
+ *   dist/virtual_astro_middleware.mjs  ← and any other files from dist/server/
  *
  * Run after `astro build`.
  */
 
-import { cpSync, rmSync, existsSync } from 'node:fs';
+import { cpSync, rmSync, renameSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const dist = new URL('../dist/', import.meta.url).pathname;
@@ -35,20 +36,20 @@ if (existsSync(client)) {
   console.log('[cloudflare-prepare] dist/client/ → dist/');
 }
 
-// 2. Copy dist/server/chunks/ → dist/chunks/
-const serverChunks = join(server, 'chunks');
-const distChunks = join(dist, 'chunks');
-if (existsSync(serverChunks)) {
-  cpSync(serverChunks, distChunks, { recursive: true });
-  console.log('[cloudflare-prepare] dist/server/chunks/ → dist/chunks/');
-}
+// 2. Copy everything from dist/server/ → dist/
+//    This includes chunks/, virtual_astro_middleware.mjs, and any other
+//    files the adapter generates. Relative imports inside chunks stay valid.
+cpSync(server, dist, { recursive: true });
+console.log('[cloudflare-prepare] dist/server/ → dist/');
 
-// 3. Rename dist/server/entry.mjs → dist/_worker.js
-const entry = join(server, 'entry.mjs');
+// 3. Rename dist/entry.mjs → dist/_worker.js
+const entry = join(dist, 'entry.mjs');
 const worker = join(dist, '_worker.js');
 if (existsSync(entry)) {
-  cpSync(entry, worker);
-  console.log('[cloudflare-prepare] dist/server/entry.mjs → dist/_worker.js');
+  renameSync(entry, worker);
+  console.log('[cloudflare-prepare] dist/entry.mjs → dist/_worker.js');
+} else {
+  console.warn('[cloudflare-prepare] WARNING: dist/entry.mjs not found after copy');
 }
 
 // 4. Remove dist/server/
