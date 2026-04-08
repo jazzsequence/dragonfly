@@ -558,15 +558,10 @@ export async function onRequest(context: { request: Request; env: Env }): Promis
   }
 
   if (request.method === 'GET') {
-    return withCors(
-      Response.json({
-        name: siteName,
-        version: '0.1.0',
-        transport: 'http',
-        tools: TOOLS.map((t) => t.name),
-        writeSync: !!(env.GITHUB_TOKEN && env.GITHUB_REPO),
-      })
-    );
+    // MCP Streamable HTTP spec: GET must return text/event-stream or 405.
+    // We don't support server-initiated SSE, so return 405.
+    // Browsers/humans can use /api/mcp/info for the status JSON.
+    return withCors(new Response('Method Not Allowed', { status: 405 }));
   }
 
   if (request.method !== 'POST') {
