@@ -16,7 +16,7 @@
  * Run after `astro build`.
  */
 
-import { cpSync, renameSync, rmSync, existsSync } from 'node:fs';
+import { cpSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const dist = new URL('../dist/', import.meta.url).pathname;
@@ -54,4 +54,14 @@ if (existsSync(entry)) {
 // 4. Remove dist/server/
 rmSync(server, { recursive: true, force: true });
 console.log('[cloudflare-prepare] removed dist/server/');
+
+// 5. Remove .wrangler/deploy/config.json — the adapter writes this pointing to
+//    dist/server/wrangler.json, which no longer exists after step 4.
+//    Without it, Wrangler falls back to detecting _worker.js at the dist root.
+const wranglerDeploy = new URL('../.wrangler/deploy/config.json', import.meta.url).pathname;
+if (existsSync(wranglerDeploy)) {
+  rmSync(wranglerDeploy, { force: true });
+  console.log('[cloudflare-prepare] removed .wrangler/deploy/config.json');
+}
+
 console.log('[cloudflare-prepare] done');
