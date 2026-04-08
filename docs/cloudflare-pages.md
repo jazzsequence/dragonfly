@@ -3,111 +3,112 @@ title: Deploying to Cloudflare Pages
 slug: cloudflare-pages
 contentType: docs
 date: 2026-04-08
-excerpt: How to deploy an Invert site to Cloudflare Pages, including the native HTTP MCP server.
+excerpt: How to deploy an Invert site to Cloudflare Pages using Wrangler CLI, including the native HTTP MCP server.
 ---
 
 # Deploying to Cloudflare Pages
 
-Cloudflare Pages is a static hosting platform with optional edge functions. Invert deploys cleanly as a static site, and includes a Pages Function that exposes the MCP server over HTTP so AI tools can connect to your deployed site directly — no local process required.
+Cloudflare Pages hosts your static Invert site and runs the MCP server at the edge via a Pages Function. Once deployed, AI tools can connect to your site's `/api/mcp` endpoint directly — no local process required.
 
-## What you get
-
-- Static Astro site deployed to a `*.pages.dev` domain (or custom domain)
-- `/api/mcp` endpoint — the Invert MCP server running at the edge, accessible to any MCP-compatible AI tool
-- Automatic redeploys on push to `main` via GitHub Actions
+> **Use Wrangler CLI for setup.** The Cloudflare dashboard UI for connecting a GitHub repository is unreliable. The CLI approach below works consistently.
 
 ## Prerequisites
 
 - A [Cloudflare account](https://dash.cloudflare.com/sign-up) (free tier is sufficient)
 - Your site repository on GitHub
+- Node.js 22+
 
-## Step 1 — Connect your repo to Cloudflare Pages
+## Step 1 — Authenticate with Cloudflare
 
-1. Go to [dash.cloudflare.com](https://dash.cloudflare.com)
-2. Click **Workers & Pages** in the left sidebar
-3. Click **Create** → under "Pages", click **Get started** next to "Import an existing Git repository"
-4. Click **Connect GitHub** and authorize the Cloudflare GitHub App
-   - If your repo doesn't appear after authorization, go to **GitHub → Settings → Applications → Installed GitHub Apps → Cloudflare Pages → Configure** and add your repository under "Repository access"
-5. Select your repository and click **Begin setup**
+```bash
+npx wrangler login
+```
 
-## Step 2 — Configure the build
+This opens a browser window. Authorize Wrangler and return to the terminal.
 
-| Setting | Value |
-|---|---|
-| Framework preset | Astro |
-| Build command | `npm run build` |
-| Build output directory | `dist` |
-| Node.js version (Environment variable) | `NODE_VERSION` = `22` |
+## Step 2 — Create the Pages project
 
-Add the `NODE_VERSION` environment variable in the **Environment variables** section before saving.
+```bash
+npx wrangler pages project create dragonfly --production-branch main
+```
 
-Click **Save and Deploy**.
+Replace `dragonfly` with your project name. This creates the project in your Cloudflare account. Cloudflare will assign a `*.pages.dev` domain — note it for Step 4.
 
-## Step 3 — Set SITE_URL
+## Step 3 — Build the site
 
-Once the first deploy completes, Cloudflare assigns a `*.pages.dev` URL (e.g., `dragonfly-abc.pages.dev`).
+```bash
+npm run build
+```
 
-1. Go to your Pages project → **Settings → Environment variables**
-2. Add: `SITE_URL` = `https://your-project.pages.dev`
-3. Go to **Deployments** and click **Retry deployment** (or push a commit) to rebuild with the correct URL
+This runs `astro build` followed by `scripts/generate-manifest.mjs`, which writes `dist/_api/content.json` — the content manifest used by the edge MCP server.
 
-## Step 4 — Add GitHub secrets for CI/CD
+## Step 4 — Set SITE_URL and rebuild
 
-Automated deployments on push require two secrets in your GitHub repository.
+Open `astro.config.mjs` — the `SITE_URL` environment variable controls the canonical site URL. Set it before building for production:
 
-**Get your Cloudflare Account ID:**
-- It appears in the right sidebar on any page in the Cloudflare dashboard, or under **Workers & Pages → Overview**
+```bash
+SITE_URL=https://dragonfly.pages.dev npm run build
+```
 
-**Create an API Token:**
+Replace `dragonfly.pages.dev` with your assigned domain from Step 2.
+
+## Step 5 — Deploy
+
+```bash
+npx wrangler pages deploy dist/
+```
+
+Wrangler uploads the static site and the Pages Function (`functions/api/mcp.ts`) together. Your site is live.
+
+## Step 6 — Set up automated deployments (GitHub Actions)
+
+Future deploys can run automatically on push to `main`. You need two secrets in your GitHub repository.
+
+**Get your Account ID:**
+
+```bash
+npx wrangler whoami
+```
+
+The account ID is printed in the output.
+
+**Create an API token:**
+
 1. Go to [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens)
 2. Click **Create Token** → use the **Cloudflare Pages** template
-3. Under "Account resources", select your account
-4. Click **Continue to summary** → **Create Token**
-5. Copy the token (you won't see it again)
+3. Scope it to your account, click through to create, and copy the token
 
-**Add to GitHub:**
-1. Go to your repo → **Settings → Secrets and variables → Actions**
-2. Add `CLOUDFLARE_API_TOKEN` (the token you just created)
-3. Add `CLOUDFLARE_ACCOUNT_ID` (your account ID)
+**Add secrets to GitHub:**
 
-The workflow in `.github/workflows/deploy-cloudflare.yml` will now run on every push to `main`.
+Go to your repo → **Settings → Secrets and variables → Actions** and add:
 
-## Step 5 — Set the project name in the workflow
+- `CLOUDFLARE_API_TOKEN` — the token you just created
+- `CLOUDFLARE_ACCOUNT_ID` — from `wrangler whoami`
 
-Open `.github/workflows/deploy-cloudflare.yml` and confirm `projectName` matches the name shown in your Cloudflare Pages dashboard (default: `dragonfly`).
+Also add a **repository variable** (not a secret) for the site URL:
+
+- Go to **Settings → Secrets and variables → Actions → Variables**
+- Add `SITE_URL` = `https://dragonfly.pages.dev`
+
+The workflow at `.github/workflows/deploy-cloudflare.yml` runs on every push to `main` and handles the build and deploy automatically.
 
 ## Connecting the MCP server
 
-Once deployed, your MCP server is available at `https://your-project.pages.dev/api/mcp`.
+Your MCP server is available at `https://your-project.pages.dev/api/mcp`.
 
-To connect it to Claude Code (or another MCP client), add to your MCP config:
+To connect it to Claude Code, add to your MCP config (`~/.claude/mcp.json` or `.mcp.json` in the project):
 
 ```json
 {
   "mcpServers": {
     "dragonfly": {
-      "url": "https://your-project.pages.dev/api/mcp"
+      "url": "https://dragonfly.pages.dev/api/mcp"
     }
   }
 }
 ```
 
-The edge MCP server is **read-only** — it supports `invert_list`, `invert_get`, `invert_search`, and `invert_types`. Write operations (`invert_create`, `invert_update`, `invert_delete`) require the local MCP server (`npm run mcp`) which has filesystem access.
-
-## How the edge MCP works
-
-At build time, `scripts/generate-manifest.mjs` reads all content from `content/`, `markdown/`, and `docs/` and writes a manifest to `dist/_api/content.json`. This file is deployed as a static asset alongside the site.
-
-At runtime, the Pages Function at `functions/api/mcp.ts` fetches `/_api/content.json` via the Cloudflare ASSETS binding and serves MCP responses over HTTP.
-
-## Custom domain
-
-To use a custom domain instead of `*.pages.dev`:
-
-1. In your Pages project → **Custom domains** → **Set up a custom domain**
-2. Enter your domain and follow the DNS instructions
-3. Update `SITE_URL` in GitHub repository variables to your custom domain
-4. Redeploy
+The edge MCP server is **read-only**: it supports `invert_list`, `invert_get`, `invert_search`, and `invert_types`. Write tools (`invert_create`, `invert_update`, `invert_delete`) require the local MCP server (`npm run mcp`), which has filesystem access.
 
 ## Local preview with Wrangler
 
@@ -118,4 +119,11 @@ npm run build
 npx wrangler pages dev dist/
 ```
 
-This starts a local server at `http://localhost:8788` with the static site and the MCP function running together.
+This starts a local server at `http://localhost:8788` with the static site and MCP function running together. The MCP endpoint will be at `http://localhost:8788/api/mcp`.
+
+## Custom domain
+
+1. In the Cloudflare dashboard: **Workers & Pages → your project → Custom domains**
+2. Add your domain and follow the DNS instructions
+3. Update `SITE_URL` in GitHub repository variables to your custom domain
+4. Trigger a redeploy (push a commit or run the workflow manually)
