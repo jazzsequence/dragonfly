@@ -1,6 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join, basename, extname } from 'node:path';
 import { remark } from 'remark';
+import remarkGfm from 'remark-gfm';
 import remarkHtml from 'remark-html';
 import type { InvertAdapter, InvertContent } from './interface.ts';
 
@@ -43,7 +44,7 @@ function parseFrontmatter(raw: string): { frontmatter: Record<string, unknown>; 
 }
 
 async function markdownToHtml(md: string): Promise<string> {
-  const result = await remark().use(remarkHtml).process(md);
+  const result = await remark().use(remarkGfm).use(remarkHtml).process(md);
   return result.toString();
 }
 
