@@ -1,0 +1,71 @@
+---
+import { invertConfig } from '../lib/config.ts';
+import { getContentTypes } from '../lib/content.ts';
+import { url } from '../lib/utils.ts';
+
+export interface Props {
+  title?: string;
+}
+
+const { title } = Astro.props;
+const contentTypes = await getContentTypes();
+const pageTitle = title ? `${title} — ${invertConfig.siteName}` : invertConfig.siteName;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href={url('favicon.svg')} />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{pageTitle}</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        padding: 0;
+        color: #1a1a1a;
+        background: #fff;
+      }
+      header {
+        border-bottom: 1px solid #e5e5e5;
+        padding: 1rem 2rem;
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+      }
+      header a { text-decoration: none; color: inherit; }
+      header .site-name { font-weight: 700; font-size: 1.25rem; }
+      nav { display: flex; gap: 1rem; }
+      nav a { color: #555; font-size: 0.9rem; text-transform: capitalize; }
+      nav a:hover { color: #000; }
+      main { max-width: 860px; margin: 0 auto; padding: 2rem; }
+      footer {
+        border-top: 1px solid #e5e5e5;
+        padding: 1rem 2rem;
+        color: #888;
+        font-size: 0.8rem;
+        text-align: center;
+        margin-top: 4rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href={url('')} class="site-name">{invertConfig.siteName}</a>
+      <nav>
+        {contentTypes.map((type) => (
+          <a href={url(`${type}/`)}>{type}</a>
+        ))}
+      </nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer>
+      Powered by <a href="https://github.com/jazzsequence/invert">Invert</a>
+    </footer>
+  </body>
+</html>

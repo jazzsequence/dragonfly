@@ -1,0 +1,74 @@
+---
+import type { InvertContent } from '../adapters/interface.ts';
+
+export interface Props {
+  content: InvertContent;
+}
+
+const { content } = Astro.props;
+---
+
+<article class="content-body">
+  <header class="content-header">
+    <p class="meta">
+      <span class="content-type">{content.contentType}</span>
+      {content.date && <time datetime={content.date}>{content.date.slice(0, 10)}</time>}
+      {content.author && <span class="author">by {content.author}</span>}
+    </p>
+    <h1>{content.title}</h1>
+    {content.excerpt && <p class="excerpt">{content.excerpt}</p>}
+    {content.featuredImage && (
+      <img src={content.featuredImage} alt={content.title} class="featured-image" />
+    )}
+    {content.taxonomies && Object.keys(content.taxonomies).length > 0 && (
+      <div class="taxonomies">
+        {Object.entries(content.taxonomies).map(([tax, terms]) => (
+          <div class="taxonomy">
+            <span class="tax-name">{tax}:</span>
+            {terms.map((term) => <span class="term">{term}</span>)}
+          </div>
+        ))}
+      </div>
+    )}
+  </header>
+  <div class="body" set:html={content.body} />
+</article>
+
+<style>
+  .content-body { max-width: 720px; }
+  .content-header { margin-bottom: 2rem; }
+  .meta { font-size: 0.85rem; color: #888; margin: 0 0 0.5rem; display: flex; gap: 0.75rem; align-items: center; }
+  .content-type {
+    background: #f0f0f0;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    text-transform: capitalize;
+  }
+  h1 { margin: 0 0 0.5rem; font-size: 2rem; }
+  .excerpt { color: #555; font-size: 1.1rem; margin: 0 0 1rem; }
+  .featured-image { width: 100%; border-radius: 6px; margin-bottom: 1rem; }
+  .taxonomies { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.85rem; }
+  .taxonomy { display: flex; gap: 0.4rem; align-items: center; }
+  .tax-name { color: #888; }
+  .term {
+    background: #f0f0f0;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+  }
+  .body :global(h2) { font-size: 1.5rem; margin-top: 2rem; }
+  .body :global(h3) { font-size: 1.2rem; margin-top: 1.5rem; }
+  .body :global(a) { color: #0066cc; }
+  .body :global(pre) {
+    background: #f5f5f5;
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .body :global(code) { font-size: 0.9em; }
+  .body :global(blockquote) {
+    border-left: 4px solid #e5e5e5;
+    margin: 0;
+    padding-left: 1rem;
+    color: #555;
+  }
+</style>

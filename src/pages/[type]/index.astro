@@ -1,0 +1,23 @@
+---
+import Base from '../../layouts/Base.astro';
+import ContentCard from '../../components/ContentCard.astro';
+import { getAllContent, getContentTypes, getContentByType } from '../../lib/content.ts';
+
+export async function getStaticPaths() {
+  const types = await getContentTypes();
+  return types.map((type) => ({ params: { type } }));
+}
+
+const { type } = Astro.params;
+const content = await getContentByType(type);
+---
+
+<Base title={type}>
+  <h1 class="type-heading">{type}</h1>
+  {content.length === 0 && <p>No content of type <strong>{type}</strong> found.</p>}
+  {content.map((item) => <ContentCard content={item} />)}
+</Base>
+
+<style>
+  .type-heading { text-transform: capitalize; }
+</style>

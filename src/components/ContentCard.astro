@@ -1,0 +1,54 @@
+---
+import type { InvertContent } from '../adapters/interface.ts';
+import { url } from '../lib/utils.ts';
+
+export interface Props {
+  content: InvertContent;
+}
+
+const { content } = Astro.props;
+---
+
+<article class="content-card">
+  {content.featuredImage && (
+    <a href={url(`${content.contentType}/${content.slug}`)}>
+      <img src={content.featuredImage} alt={content.title} class="featured-image" />
+    </a>
+  )}
+  <div class="card-body">
+    <p class="meta">
+      <span class="content-type">{content.contentType}</span>
+      {content.date && <time datetime={content.date}>{content.date.slice(0, 10)}</time>}
+      {content.author && <span class="author">by {content.author}</span>}
+    </p>
+    <h2><a href={url(`${content.contentType}/${content.slug}`)}>{content.title}</a></h2>
+    {content.excerpt && <p class="excerpt">{content.excerpt}</p>}
+  </div>
+</article>
+
+<style>
+  .content-card {
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .featured-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+  }
+  .card-body { padding: 1rem 1.25rem; }
+  .meta { font-size: 0.8rem; color: #888; margin: 0 0 0.5rem; display: flex; gap: 0.75rem; }
+  .content-type {
+    background: #f0f0f0;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    text-transform: capitalize;
+  }
+  h2 { margin: 0 0 0.5rem; font-size: 1.2rem; }
+  h2 a { text-decoration: none; color: inherit; }
+  h2 a:hover { text-decoration: underline; }
+  .excerpt { margin: 0; color: #555; font-size: 0.95rem; }
+</style>
