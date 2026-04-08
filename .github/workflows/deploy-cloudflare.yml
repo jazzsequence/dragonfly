@@ -1,0 +1,54 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'content/**'
+      - 'docs/**'
+      - 'markdown/**'
+      - 'src/**'
+      - 'functions/**'
+      - 'public/**'
+      - 'scripts/**'
+      - 'astro.config.mjs'
+      - 'wrangler.jsonc'
+      - 'package*.json'
+      - '.github/workflows/deploy-cloudflare.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          # Set SITE_URL to your Cloudflare Pages domain.
+          # Either set this as a repository variable (Settings → Variables → Actions)
+          # or hard-code your *.pages.dev URL here.
+          SITE_URL: ${{ vars.SITE_URL || 'https://dragonfly.pages.dev' }}
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Must match the project name in your Cloudflare Pages dashboard.
+          projectName: dragonfly
+          directory: dist
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

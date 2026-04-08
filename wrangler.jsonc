@@ -1,8 +1,13 @@
 {
+	// Cloudflare Pages + Workers configuration for Dragonfly (Invert test site).
+	// Used by: `wrangler pages dev dist/` for local preview, and CI/CD for deployment.
+	//
+	// For static Cloudflare Pages deployment (no SSR), "main" is NOT needed.
+	// If you later switch to SSR mode (output: 'server' in astro.config.mjs),
+	// add: "main": "@astrojs/cloudflare/entrypoints/server"
 	"compatibility_date": "2026-04-07",
-	"compatibility_flags": ["global_fetch_strictly_public", "nodejs_compat"],
-	"name": "invert",
-	"main": "@astrojs/cloudflare/entrypoints/server",
+	"compatibility_flags": ["nodejs_compat"],
+	"name": "dragonfly",
 	"assets": {
 		"directory": "./dist",
 		"binding": "ASSETS"
