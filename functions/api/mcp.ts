@@ -300,12 +300,11 @@ async function toolTypes(env: Env, requestUrl: string): Promise<string[]> {
 
 async function toolCreate(
   env: Env,
-  item: ContentItem
+  item: ContentItem,
+  waitUntil: (p: Promise<unknown>) => void
 ): Promise<{ path: string; githubSync: boolean }> {
   await kvPutItem(env, item);
-  // Fire-and-forget GitHub commit
-  const syncPromise = githubCommit(env, 'upsert', item.contentType, item.slug, item);
-  void syncPromise.catch(() => {}); // don't block on GitHub errors
+  waitUntil(githubCommit(env, 'upsert', item.contentType, item.slug, item).catch(() => {}));
   return {
     path: `content/${item.contentType}/${item.slug}.json`,
     githubSync: !!(env.GITHUB_TOKEN && env.GITHUB_REPO),
@@ -315,23 +314,25 @@ async function toolCreate(
 async function toolUpdate(
   env: Env,
   requestUrl: string,
-  args: { contentType: string; slug: string; updates: Partial<ContentItem> }
+  args: { contentType: string; slug: string; updates: Partial<ContentItem> },
+  waitUntil: (p: Promise<unknown>) => void
 ): Promise<ContentItem | null> {
   const existing = await toolGet(env, requestUrl, { contentType: args.contentType, slug: args.slug });
   if (!existing) return null;
   const updated: ContentItem = { ...existing, ...args.updates };
   await kvPutItem(env, updated);
-  void githubCommit(env, 'upsert', updated.contentType, updated.slug, updated).catch(() => {});
+  waitUntil(githubCommit(env, 'upsert', updated.contentType, updated.slug, updated).catch(() => {}));
   return updated;
 }
 
 async function toolDelete(
   env: Env,
-  args: { contentType: string; slug: string }
+  args: { contentType: string; slug: string },
+  waitUntil: (p: Promise<unknown>) => void
 ): Promise<{ deleted: boolean; githubSync: boolean }> {
   const deleted = await kvDeleteItem(env, args.contentType, args.slug);
   if (deleted) {
-    void githubCommit(env, 'delete', args.contentType, args.slug).catch(() => {});
+    waitUntil(githubCommit(env, 'delete', args.contentType, args.slug).catch(() => {}));
   }
   return { deleted, githubSync: !!(env.GITHUB_TOKEN && env.GITHUB_REPO) };
 }
@@ -467,7 +468,8 @@ function text(content: unknown): { content: Array<{ type: string; text: string }
 async function dispatch(
   msg: { method: string; params?: Record<string, unknown>; id?: unknown },
   env: Env,
-  requestUrl: string
+  requestUrl: string,
+  waitUntil: (p: Promise<unknown>) => void
 ): Promise<Response> {
   const { method, params = {}, id } = msg;
   const siteName = env.SITE_NAME ?? 'dragonfly';
@@ -506,17 +508,17 @@ async function dispatch(
           case 'invert_types':
             return ok(id, text(await toolTypes(env, requestUrl)));
           case 'invert_create': {
-            const result = await toolCreate(env, args as ContentItem);
+            const result = await toolCreate(env, args as ContentItem, waitUntil);
             const note = result.githubSync ? ' GitHub sync queued.' : ' Warning: GITHUB_TOKEN not set — content will not survive a site rebuild.';
             return ok(id, { content: [{ type: 'text', text: `Created: ${result.path}.${note}` }] });
           }
           case 'invert_update': {
-            const updated = await toolUpdate(env, requestUrl, args as Parameters<typeof toolUpdate>[2]);
+            const updated = await toolUpdate(env, requestUrl, args as Parameters<typeof toolUpdate>[2], waitUntil);
             if (!updated) return ok(id, { content: [{ type: 'text', text: 'Not found' }], isError: true });
             return ok(id, text(updated));
           }
           case 'invert_delete': {
-            const result = await toolDelete(env, args as Parameters<typeof toolDelete>[2]);
+            const result = await toolDelete(env, args as Parameters<typeof toolDelete>[2], waitUntil);
             const note = result.githubSync ? ' GitHub sync queued.' : ' Warning: GITHUB_TOKEN not set.';
             return ok(id, { content: [{ type: 'text', text: result.deleted ? `Deleted.${note}` : 'Not found.' }] });
           }
@@ -549,8 +551,8 @@ function withCors(res: Response): Response {
   return new Response(res.body, { status: res.status, headers });
 }
 
-export async function onRequest(context: { request: Request; env: Env }): Promise<Response> {
-  const { request, env } = context;
+export async function onRequest(context: { request: Request; env: Env; waitUntil: (p: Promise<unknown>) => void }): Promise<Response> {
+  const { request, env, waitUntil } = context;
   const siteName = env.SITE_NAME ?? 'dragonfly';
 
   if (request.method === 'OPTIONS') {
@@ -578,11 +580,11 @@ export async function onRequest(context: { request: Request; env: Env }): Promis
   if (Array.isArray(body)) {
     const results = await Promise.all(
       body.map((msg) =>
-        dispatch(msg as Parameters<typeof dispatch>[0], env, request.url).then((r) => r.json())
+        dispatch(msg as Parameters<typeof dispatch>[0], env, request.url, waitUntil).then((r) => r.json())
       )
     );
     return withCors(Response.json(results));
   }
 
-  return withCors(await dispatch(body as Parameters<typeof dispatch>[0], env, request.url));
+  return withCors(await dispatch(body as Parameters<typeof dispatch>[0], env, request.url, waitUntil));
 }
