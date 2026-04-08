@@ -28,10 +28,15 @@ const { content } = Astro.props;
 
 <style>
   .content-card {
-    border: 1px solid #e5e5e5;
-    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
     overflow: hidden;
     margin-bottom: 1.5rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .content-card:hover {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 12px rgba(0, 229, 204, 0.15);
   }
   .featured-image {
     width: 100%;
@@ -40,15 +45,18 @@ const { content } = Astro.props;
     display: block;
   }
   .card-body { padding: 1rem 1.25rem; }
-  .meta { font-size: 0.8rem; color: #888; margin: 0 0 0.5rem; display: flex; gap: 0.75rem; }
+  .meta { font-size: 0.8rem; color: var(--color-muted); margin: 0 0 0.5rem; display: flex; gap: 0.75rem; }
   .content-type {
-    background: #f0f0f0;
+    background: var(--color-surface-tag);
+    border: 1px solid var(--color-border);
     padding: 0.1rem 0.4rem;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     text-transform: capitalize;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
   }
-  h2 { margin: 0 0 0.5rem; font-size: 1.2rem; }
-  h2 a { text-decoration: none; color: inherit; }
-  h2 a:hover { text-decoration: underline; }
-  .excerpt { margin: 0; color: #555; font-size: 0.95rem; }
+  h2 { margin: 0 0 0.5rem; font-size: 1.2rem; font-family: var(--font-heading); }
+  h2 a { text-decoration: none; color: var(--color-text); transition: color 0.15s; }
+  h2 a:hover { color: var(--color-accent); }
+  .excerpt { margin: 0; color: var(--color-text-sub); font-size: 0.95rem; }
 </style>

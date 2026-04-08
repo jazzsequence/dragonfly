@@ -1,4 +1,11 @@
 ---
+import '@fontsource/space-grotesk/400.css';
+import '@fontsource/space-grotesk/700.css';
+import '@fontsource/geist/400.css';
+import '@fontsource/geist/700.css';
+import '@fontsource/victor-mono/400.css';
+import '../styles/theme.css';
+import '../styles/global.css';
 import { invertConfig } from '../lib/config.ts';
 import { getContentTypes } from '../lib/content.ts';
 import { url } from '../lib/utils.ts';
@@ -20,41 +27,10 @@ const pageTitle = title ? `${title} — ${invertConfig.siteName}` : invertConfig
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <title>{pageTitle}</title>
-    <style>
-      *, *::before, *::after { box-sizing: border-box; }
-      body {
-        font-family: system-ui, sans-serif;
-        margin: 0;
-        padding: 0;
-        color: #1a1a1a;
-        background: #fff;
-      }
-      header {
-        border-bottom: 1px solid #e5e5e5;
-        padding: 1rem 2rem;
-        display: flex;
-        align-items: center;
-        gap: 2rem;
-      }
-      header a { text-decoration: none; color: inherit; }
-      header .site-name { font-weight: 700; font-size: 1.25rem; }
-      nav { display: flex; gap: 1rem; }
-      nav a { color: #555; font-size: 0.9rem; text-transform: capitalize; }
-      nav a:hover { color: #000; }
-      main { max-width: 860px; margin: 0 auto; padding: 2rem; }
-      footer {
-        border-top: 1px solid #e5e5e5;
-        padding: 1rem 2rem;
-        color: #888;
-        font-size: 0.8rem;
-        text-align: center;
-        margin-top: 4rem;
-      }
-    </style>
   </head>
   <body>
     <header>
-      <a href={url('')} class="site-name">{invertConfig.siteName}</a>
+      <a href={url('')} class="site-name neon-text">{invertConfig.siteName}</a>
       <nav>
         {contentTypes.map((type) => (
           <a href={url(`${type}/`)}>{type}</a>
@@ -69,3 +45,41 @@ const pageTitle = title ? `${title} — ${invertConfig.siteName}` : invertConfig
     </footer>
   </body>
 </html>
+
+<style is:global>
+  header {
+    background: var(--color-header-bg);
+    border-bottom: 1px solid var(--color-border);
+    padding: 1rem var(--space-page);
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+  header a { text-decoration: none; color: inherit; }
+  header .site-name {
+    font-weight: 700;
+    font-size: 1.25rem;
+    font-family: var(--font-heading);
+    letter-spacing: 0.03em;
+  }
+  nav { display: flex; gap: 1rem; }
+  nav a { color: var(--color-muted); font-size: 0.9rem; text-transform: capitalize; transition: color 0.15s; }
+  nav a:hover { color: var(--color-accent); }
+  main { max-width: var(--content-max); margin: 0 auto; padding: var(--space-page); }
+  footer {
+    border-top: 1px solid var(--color-border);
+    padding: 1rem var(--space-page);
+    color: var(--color-muted);
+    font-size: 0.8rem;
+    text-align: center;
+    margin-top: 4rem;
+  }
+  footer a { color: var(--color-muted); }
+  footer a:hover { color: var(--color-accent); }
+
+  /* Scrollbar (dark themed) */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--color-bg); }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-bright); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-accent); }
+</style>
