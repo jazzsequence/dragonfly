@@ -1,63 +1,27 @@
 ---
-export const prerender = false;
-
 import Base from '../../layouts/Base.astro';
 import ContentCard from '../../components/ContentCard.astro';
-import { getContentByType } from '../../lib/content.ts';
+import { getAllContent } from '../../lib/content.ts';
 import type { InvertContent } from '../../adapters/interface.ts';
 
-const { type } = Astro.params as { type: string };
-
-// Collect static adapter items
-const staticItems = await getContentByType(type);
-
-// Layer KV items on top (KV wins for any key that exists in both)
-let content: InvertContent[] = staticItems;
-try {
-  const runtime = (Astro.locals as { runtime?: { env?: { CONTENT?: { get(k: string): Promise<string | null> } } } }).runtime;
-  const kv = runtime?.env?.CONTENT;
-  if (kv) {
-    const indexRaw = await kv.get('_index');
-    if (indexRaw) {
-      const kvIndex = JSON.parse(indexRaw) as Array<{
-        type: string; slug: string; title: string;
-        excerpt?: string | null; date?: string | null; author?: string | null;
-      }>;
-      const kvEntries = kvIndex.filter((e) => e.type === type);
-      if (kvEntries.length > 0) {
-        const merged = new Map<string, InvertContent>();
-        for (const item of staticItems) {
-          merged.set(item.slug, item);
-        }
-        for (const entry of kvEntries) {
-          // Use stub — full body not needed for listing
-          merged.set(entry.slug, {
-            id: entry.slug,
-            slug: entry.slug,
-            title: entry.title,
-            body: '',
-            contentType: type,
-            excerpt: entry.excerpt ?? undefined,
-            date: entry.date ?? undefined,
-            author: entry.author ?? undefined,
-          });
-        }
-        content = [...merged.values()].sort((a, b) => {
-          if (a.date && b.date) return b.date.localeCompare(a.date);
-          return 0;
-        });
-      }
-    }
-  }
-} catch {
-  // KV unavailable in local dev — static items already set
+export async function getStaticPaths() {
+  const all = await getAllContent();
+  const types = [...new Set(all.map((c) => c.contentType))];
+  return types.map((type) => ({
+    params: { type },
+    props: { items: all.filter((c) => c.contentType === type) },
+  }));
 }
+
+interface Props { items: InvertContent[]; }
+const { type } = Astro.params as { type: string };
+const { items } = Astro.props;
 ---
 
 <Base title={type}>
   <h1 class="type-heading">{type}</h1>
-  {content.length === 0 && <p>No content of type <strong>{type}</strong> found.</p>}
-  {content.map((item) => <ContentCard content={item} />)}
+  {items.length === 0 && <p>No content of type <strong>{type}</strong> found.</p>}
+  {items.map((item) => <ContentCard content={item} />)}
 </Base>
 
 <style>

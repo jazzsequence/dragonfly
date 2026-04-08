@@ -1,34 +1,21 @@
 ---
-export const prerender = false;
-
 import Base from '../../layouts/Base.astro';
 import ContentBody from '../../components/ContentBody.astro';
-import { getContentBySlug } from '../../lib/content.ts';
+import { getAllContent } from '../../lib/content.ts';
 import { url } from '../../lib/utils.ts';
 import type { InvertContent } from '../../adapters/interface.ts';
 
-const { type, slug } = Astro.params as { type: string; slug: string };
-
-// Try KV first (immediate consistency for MCP-written content)
-let content: InvertContent | null = null;
-try {
-  const runtime = (Astro.locals as { runtime?: { env?: { CONTENT?: { get(k: string): Promise<string | null> } } } }).runtime;
-  const kv = runtime?.env?.CONTENT;
-  if (kv) {
-    const raw = await kv.get(`content:${type}:${slug}`);
-    if (raw) {
-      const parsed = JSON.parse(raw) as InvertContent;
-      content = parsed;
-    }
-  }
-} catch {
-  // KV unavailable in local dev — fall through to adapters
+export async function getStaticPaths() {
+  const all = await getAllContent();
+  return all.map((item) => ({
+    params: { type: item.contentType, slug: item.slug },
+    props: { content: item },
+  }));
 }
 
-// Fall back to static adapters (local files, markdown, docs)
-if (!content) {
-  content = await getContentBySlug(type, slug);
-}
+interface Props { content: InvertContent; }
+const { content } = Astro.props;
+const { type } = Astro.params as { type: string };
 ---
 
 <Base title={content?.title}>
@@ -45,11 +32,11 @@ if (!content) {
 <style>
   .back-link {
     display: inline-block;
-    color: #888;
+    color: var(--color-muted);
     text-decoration: none;
     font-size: 0.9rem;
     margin-bottom: 1.5rem;
     text-transform: capitalize;
   }
-  .back-link:hover { color: #000; }
+  .back-link:hover { color: var(--color-text); }
 </style>

@@ -1,47 +1,11 @@
 ---
-export const prerender = false;
-
 import Base from '../layouts/Base.astro';
 import { getContentByType } from '../lib/content.ts';
 import { url } from '../lib/utils.ts';
-import type { InvertContent } from '../adapters/interface.ts';
 
-// Static adapter content
-const staticPosts = await getContentByType('posts');
+const posts = await getContentByType('posts');
 const docs = await getContentByType('docs');
 
-// Layer KV posts on top for immediate visibility of MCP-written content
-let posts: InvertContent[] = staticPosts;
-try {
-  const runtime = (Astro.locals as { runtime?: { env?: { CONTENT?: { get(k: string): Promise<string | null> } } } }).runtime;
-  const kv = runtime?.env?.CONTENT;
-  if (kv) {
-    const indexRaw = await kv.get('_index');
-    if (indexRaw) {
-      const kvIndex = JSON.parse(indexRaw) as Array<{
-        type: string; slug: string; title: string;
-        excerpt?: string | null; date?: string | null; author?: string | null;
-      }>;
-      const kvPosts = kvIndex.filter((e) => e.type === 'posts');
-      if (kvPosts.length > 0) {
-        const merged = new Map<string, InvertContent>();
-        for (const item of staticPosts) merged.set(item.slug, item);
-        for (const entry of kvPosts) {
-          merged.set(entry.slug, {
-            id: entry.slug, slug: entry.slug, title: entry.title, body: '',
-            contentType: 'posts', excerpt: entry.excerpt ?? undefined,
-            date: entry.date ?? undefined, author: entry.author ?? undefined,
-          });
-        }
-        posts = [...merged.values()];
-      }
-    }
-  }
-} catch {
-  // KV unavailable in local dev
-}
-
-// Sort posts by date descending
 const sortedPosts = posts
   .filter((p) => p.date)
   .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime());

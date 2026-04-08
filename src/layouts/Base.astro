@@ -30,7 +30,7 @@ const pageTitle = title ? `${title} — ${invertConfig.siteName}` : invertConfig
   </head>
   <body>
     <header>
-      <a href={url('')} class="site-name neon-text">{invertConfig.siteName}</a>
+      <a href={url('')} class="site-name">{invertConfig.siteName}</a>
       <nav>
         {contentTypes.map((type) => (
           <a href={url(`${type}/`)}>{type}</a>
