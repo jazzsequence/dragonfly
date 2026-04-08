@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && node scripts/generate-manifest.mjs",
+    "build": "astro build && node scripts/generate-manifest.mjs && node scripts/cloudflare-prepare.mjs",
     "preview": "astro preview",
     "astro": "astro",
     "generate-types": "wrangler types",

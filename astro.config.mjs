@@ -11,6 +11,6 @@ const base = process.env.SITE_BASE ?? undefined;
 export default defineConfig({
   site,
   base,
-  output: 'static',
+  output: 'server',
   adapter: cloudflare(),
 });
