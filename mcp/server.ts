@@ -9,6 +9,8 @@ import {
   invertCreate,
   invertUpdate,
   invertDelete,
+  invertNormalizeAndCreate,
+  type SourceType,
 } from './tools.ts';
 
 const server = new McpServer({
@@ -156,6 +158,27 @@ server.tool(
             : `Not found: ${contentType}/${slug}`,
         },
       ],
+    };
+  }
+);
+
+server.tool(
+  'invert_normalize_and_create',
+  'Normalize raw content returned by a WordPress or Drupal source MCP and import it as Invert content. The AI fetches from the source MCP, then passes the raw result here — field mapping is handled in code, not in the AI reasoning chain.',
+  {
+    raw: z.record(z.unknown()).describe('Raw content object returned by the source MCP'),
+    sourceType: z
+      .enum(['wordpress', 'drupal'])
+      .describe('Source platform type — determines the normalization mapping'),
+    contentType: z
+      .string()
+      .optional()
+      .describe('Override the content type derived from the source (e.g. map WP "post" to "article")'),
+  },
+  async ({ raw, sourceType, contentType }) => {
+    const result = await invertNormalizeAndCreate(raw, sourceType as SourceType, contentType);
+    return {
+      content: [{ type: 'text', text: `Imported: ${result.path}` }],
     };
   }
 );
