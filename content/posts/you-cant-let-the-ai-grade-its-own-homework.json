@@ -6,7 +6,7 @@
   "contentType": "posts",
   "date": "2026-04-10",
   "author": "Chris Reynolds",
-  "excerpt": "The real issue with AI-assisted development is trust. Not whether the AI is capable — it is — but whether it will do all of its homework without someone checking. That's where adversarial training comes in.",
+  "excerpt": "The real issue with AI-assisted development is trust: will the AI do all of its homework without someone checking? That's where adversarial training comes in.",
   "taxonomies": {
     "tags": [
       "claude-code",
