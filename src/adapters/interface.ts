@@ -14,6 +14,8 @@ export interface InvertContent {
   featuredImage?: string;
   taxonomies?: Record<string, string[]>;
   meta?: Record<string, unknown>;
+  // undefined is treated as published — backwards compatible with existing content
+  status?: 'draft' | 'published';
 }
 
 export interface InvertAdapter {

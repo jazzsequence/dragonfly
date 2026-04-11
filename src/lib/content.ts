@@ -1,7 +1,12 @@
 import type { InvertContent } from '../adapters/interface.ts';
 import { invertConfig } from './config.ts';
 
-export async function getAllContent(): Promise<InvertContent[]> {
+export interface ContentQueryOptions {
+  /** Include content with status: "draft". Defaults to false. */
+  includeDrafts?: boolean;
+}
+
+export async function getAllContent(options: ContentQueryOptions = {}): Promise<InvertContent[]> {
   const results = await Promise.all(
     invertConfig.adapters.map((adapter) => adapter.getAll())
   );
@@ -19,10 +24,13 @@ export async function getAllContent(): Promise<InvertContent[]> {
     }
   }
 
-  return merged.sort((a, b) => {
+  const sorted = merged.sort((a, b) => {
     if (a.date && b.date) return b.date.localeCompare(a.date);
     return 0;
   });
+
+  // undefined status is treated as published — backwards compatible
+  return options.includeDrafts ? sorted : sorted.filter((item) => item.status !== 'draft');
 }
 
 export async function getContentByType(contentType: string): Promise<InvertContent[]> {

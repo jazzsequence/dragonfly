@@ -91,6 +91,7 @@ export class JsonAdapter implements InvertAdapter {
         featuredImage: data.featuredImage,
         taxonomies: data.taxonomies,
         meta: data.meta,
+        status: data.status,
       };
     } catch {
       return null;

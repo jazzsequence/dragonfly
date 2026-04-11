@@ -115,6 +115,7 @@ export class MarkdownAdapter implements InvertAdapter {
         featuredImage: frontmatter.featuredImage as string | undefined,
         taxonomies: tags ? { tags } : undefined,
         meta: frontmatter.meta as Record<string, unknown> | undefined,
+        status: frontmatter.status as 'draft' | 'published' | undefined,
       };
     } catch {
       return null;
