@@ -16,9 +16,18 @@ export async function getStaticPaths() {
 interface Props { content: InvertContent; }
 const { content } = Astro.props;
 const { type } = Astro.params as { type: string };
+const canonicalUrl = Astro.site
+  ? new URL(Astro.url.pathname, Astro.site).toString()
+  : undefined;
 ---
 
-<Base title={content?.title}>
+<Base
+  title={content?.title}
+  description={content?.excerpt}
+  image={content?.featuredImage}
+  canonicalUrl={canonicalUrl}
+  ogType="article"
+>
   {content ? (
     <>
       <a href={url(`${type}/`)} class="back-link">← {type}</a>

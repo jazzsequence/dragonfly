@@ -1,0 +1,80 @@
+---
+import Base from '../../../layouts/Base.astro';
+import ContentBody from '../../../components/ContentBody.astro';
+import { getAllContent } from '../../../lib/content.ts';
+import { url } from '../../../lib/utils.ts';
+import type { InvertContent } from '../../../adapters/interface.ts';
+
+export async function getStaticPaths() {
+  const all = await getAllContent({ includeDrafts: true });
+  // Only build preview routes for draft content — published content uses its canonical URL
+  return all
+    .filter((item) => item.status === 'draft')
+    .map((item) => ({
+      params: { type: item.contentType, slug: item.slug },
+      props: { content: item },
+    }));
+}
+
+interface Props { content: InvertContent; }
+const { content } = Astro.props;
+const { type } = Astro.params as { type: string };
+---
+
+<Base
+  title={`[Draft] ${content.title}`}
+  description={content.excerpt}
+  noindex={true}
+>
+  <div class="preview-banner" data-preview-banner>
+    <span class="preview-label">Draft Preview</span>
+    This content has not been published. Share this URL to request review:
+    <code class="preview-url">{Astro.url.pathname}?preview</code>
+  </div>
+
+  <a href={url(`${type}/`)} class="back-link">← {type}</a>
+  <ContentBody content={content} />
+</Base>
+
+<style>
+  .preview-banner {
+    background: var(--color-surface, #f5f5f5);
+    border: 2px solid #f0a500;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+    color: #7a5500;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .preview-label {
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #f0a500;
+    color: #fff;
+    padding: 0.15em 0.5em;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .preview-url {
+    font-size: 0.8rem;
+    background: rgba(0, 0, 0, 0.06);
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+    word-break: break-all;
+  }
+  .back-link {
+    display: inline-block;
+    color: var(--color-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    text-transform: capitalize;
+  }
+  .back-link:hover { color: var(--color-text); }
+</style>

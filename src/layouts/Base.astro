@@ -12,9 +12,14 @@ import { url } from '../lib/utils.ts';
 
 export interface Props {
   title?: string;
+  description?: string;
+  image?: string;
+  canonicalUrl?: string;
+  noindex?: boolean;
+  ogType?: 'website' | 'article';
 }
 
-const { title } = Astro.props;
+const { title, description, image, canonicalUrl, noindex, ogType = 'website' } = Astro.props;
 const contentTypes = await getContentTypes();
 const pageTitle = title ? `${title} — ${invertConfig.siteName}` : invertConfig.siteName;
 ---
@@ -27,6 +32,22 @@ const pageTitle = title ? `${title} — ${invertConfig.siteName}` : invertConfig
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <title>{pageTitle}</title>
+    <!-- Open Graph -->
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:site_name" content={invertConfig.siteName} />
+    <meta property="og:type" content={ogType} />
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+    {description && <meta name="description" content={description} />}
+    {description && <meta property="og:description" content={description} />}
+    {image && <meta property="og:image" content={image} />}
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={pageTitle} />
+    {description && <meta name="twitter:description" content={description} />}
+    {image && <meta name="twitter:image" content={image} />}
+    <!-- Draft pages must not be indexed -->
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
   </head>
   <body>
     <header>
