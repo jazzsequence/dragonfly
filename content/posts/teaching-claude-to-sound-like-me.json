@@ -1,0 +1,20 @@
+{
+  "id": "teaching-claude-to-sound-like-me",
+  "slug": "teaching-claude-to-sound-like-me",
+  "title": "Teaching Claude to Sound Like Me",
+  "contentType": "posts",
+  "date": "2026-04-15",
+  "author": "Chris Reynolds",
+  "excerpt": "I saw an Instagram post yesterday about Wikipedia's list of signs that something was written by AI. No one tells Claude to write like this. This is just how it writes.",
+  "taxonomies": {
+    "tags": [
+      "ai",
+      "claude-code",
+      "writing",
+      "invert",
+      "mcp",
+      "skills"
+    ]
+  },
+  "body": "<p><em><strong>Disclosure:</strong> This post was composed by Claude (Anthropic) using the <a href=\"https://github.com/jazzsequence/Invert\">Invert</a> MCP server. See the <a href=\"/pages/about\">About page</a> for more on how this site works.</em></p>\n\n<p>I saw an Instagram post yesterday about Wikipedia's <a href=\"https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing\">list of signs that something was written by AI</a>. You probably implicitly know the list, or would recognize it when you see it.</p>\n\n<p>No one tells Claude to write like this. This is just how it writes.</p>\n\n<p>This blog is an experiment in my <a href=\"https://jazzsequence.github.io/Invert\">Invert</a> MCP framework, and I'm intentionally leaning into the MCP elements and AI-generated content. But I'm the one that allows that content to be published. Which almost makes it matter more that the content sounds like a person, because ultimately, I'm the one signing off on it.</p>\n\n<p>So I built a Claude Code skill.</p>\n\n<h2>What it does</h2>\n\n<p>I created a <a href=\"https://github.com/jazzsequence/claude-write-like-a-human-skill\">write-like-a-human skill</a> to try to make Claude write like me. It does two things:</p>\n\n<p>The first is a negative list, pulled from that Wikipedia page. Wikipedia's goal is keeping AI-generated text out of encyclopedia articles. That's not my specific problem. But the patterns it's documenting are real, and the list is useful regardless of context.</p>\n\n<p>The second is a positive voice model, built from style analysis of posts from <a href=\"https://next.jazzsequence.com\">jazzsequence.com</a>. Things like paragraph rhythm, how I open and close things, the parenthetical asides I apparently can't stop doing (like this one), and where I hedge instead of overclaiming.</p>\n\n<p>The idea: if I'm going to use Claude to write something with my name on it, it should write it like I'd write it.</p>\n\n<h2>This is an arms race and I know it</h2>\n\n<p>I realize I'm playing into the arms race of training AI to not sound like AI based on Wikipedia's rules for identifying AI-sounding writing. But I think ultimately the goal is for content to not <em>sound</em> like AI, not necessarily for content to not be <em>written by</em> AI.</p>\n\n<p>I'm not hiding anything — this blog <a href=\"https://dragonfly.jazzsequence.com/pages/about\">exists specifically for AI-assisted content</a>. But I still want it to be worth reading.</p>\n\n<h2>Using it</h2>\n\n<p>It's a Claude Code skill — a markdown prompt that loads when you run <code>/write-like-a-human</code> in any Claude Code session. The <a href=\"https://github.com/jazzsequence/claude-write-like-a-human-skill\">repo is on GitHub</a> with a one-liner installer.</p>\n\n<p>If you use it as-is, you might end up sounding like me. Which could be funny or interesting, but maybe not what you actually want. The more useful thing is to swap out the voice model section with your own writing samples. The anti-patterns section works for anyone. The voice model should probably be yours.</p>\n\n<p><em>This post was composed by Claude using the Invert MCP server.</em></p>"
+}
