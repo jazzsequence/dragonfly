@@ -76,13 +76,9 @@ function renderPreview(item: ContentItem, type: string, styleLinks: string): str
   <title>[Draft] ${title}</title>
   ${styleLinks}
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
     .draft-banner { background: #fef9ec; border: 2px solid #f0a500; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 2rem; font-size: 0.9rem; color: #7a5500; display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
     .draft-label { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; background: #f0a500; color: #fff; padding: 0.15em 0.5em; border-radius: 3px; flex-shrink: 0; }
-    .back-link { display: inline-block; color: #666; text-decoration: none; font-size: 0.9rem; margin-bottom: 1.5rem; text-transform: capitalize; }
-    .back-link:hover { color: #1a1a1a; }
-    h1 { margin-top: 0; }
+    .back-link { display: inline-block; text-decoration: none; font-size: 0.9rem; margin-bottom: 1.5rem; text-transform: capitalize; }
   </style>
 </head>
 <body>
