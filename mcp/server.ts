@@ -9,6 +9,7 @@ import {
   invertCreate,
   invertUpdate,
   invertDelete,
+  invertPublish,
   invertNormalizeAndCreate,
   type SourceType,
 } from './tools.ts';
@@ -87,13 +88,14 @@ server.tool(
 
 server.tool(
   'invert_create',
-  'Create a new content item (writes a JSON file to disk).',
+  'Create a new content item. Set status to "draft" to write to .drafts/ (gitignored, never deployed); omit or set to "published" to write to content/ (committed and deployed).',
   {
     id: z.string(),
     slug: z.string(),
     title: z.string(),
     body: z.string(),
     contentType: z.string(),
+    status: z.enum(['draft', 'published']).optional().describe('"draft" stores in .drafts/ (transient, not committed); "published" stores in content/ (committed and deployed)'),
     date: z.string().optional(),
     author: z.string().optional(),
     excerpt: z.string().optional(),
@@ -111,13 +113,14 @@ server.tool(
 
 server.tool(
   'invert_update',
-  'Update an existing content item.',
+  'Update an existing content item. Changing status between "draft" and "published" moves the file between .drafts/ and content/.',
   {
     contentType: z.string(),
     slug: z.string(),
     updates: z.object({
       title: z.string().optional(),
       body: z.string().optional(),
+      status: z.enum(['draft', 'published']).optional().describe('Change status to move the file between .drafts/ and content/'),
       date: z.string().optional(),
       author: z.string().optional(),
       excerpt: z.string().optional(),
@@ -158,6 +161,27 @@ server.tool(
             : `Not found: ${contentType}/${slug}`,
         },
       ],
+    };
+  }
+);
+
+server.tool(
+  'invert_publish',
+  'Promote a draft to published: moves it from .drafts/ to content/ and sets status to "published". The file will be picked up by git on the next commit.',
+  {
+    contentType: z.string().describe('Content type (e.g. "posts")'),
+    slug: z.string().describe('Content slug (e.g. "my-draft-post")'),
+  },
+  async ({ contentType, slug }) => {
+    const result = await invertPublish(contentType, slug);
+    if (!result) {
+      return {
+        content: [{ type: 'text', text: `Draft not found: ${contentType}/${slug}` }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: 'text', text: `Published: ${result.path}` }],
     };
   }
 );

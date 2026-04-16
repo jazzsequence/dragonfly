@@ -159,6 +159,7 @@ export class MarkdownAdapter implements InvertAdapter {
         excerpt: frontmatter.excerpt as string | undefined,
         featuredImage: frontmatter.featuredImage as string | undefined,
         taxonomies: tags ? { tags } : undefined,
+        status: frontmatter.status as 'draft' | 'published' | undefined,
       });
     }
 

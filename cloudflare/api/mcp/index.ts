@@ -16,14 +16,16 @@
  *
  * Required environment variables (set in Cloudflare Pages dashboard or wrangler.jsonc):
  *   GITHUB_TOKEN   GitHub PAT with repo write access (Contents: read & write)
- *   GITHUB_REPO    e.g. "jazzsequence/dragonfly"
+ *   GITHUB_REPO    e.g. "owner/your-repo"
  *   GITHUB_BRANCH  default "main"
  *
  * Required Cloudflare bindings (wrangler.jsonc):
  *   CONTENT  KV namespace  (npx wrangler kv namespace create CONTENT)
  */
 
-export const prerender = false;
+// prerender = true when building for static hosts (e.g. GitHub Pages).
+// Set DEPLOY_TARGET=cloudflare to keep this as an SSR route.
+export const prerender = import.meta.env.DEPLOY_TARGET !== 'cloudflare';
 
 import type { APIContext } from 'astro';
 
@@ -43,6 +45,7 @@ interface ContentItem {
   featuredImage?: string | null;
   taxonomies?: Record<string, string[]>;
   meta?: Record<string, unknown>;
+  status?: 'draft' | 'published';
 }
 
 interface IndexEntry {
@@ -78,9 +81,14 @@ interface Env {
 // ---------------------------------------------------------------------------
 
 const KV_INDEX = '_index';
+const KV_DRAFT_INDEX = '_draft_index';
 
 function kvKey(contentType: string, slug: string) {
   return `content:${contentType}:${slug}`;
+}
+
+function draftKvKey(contentType: string, slug: string) {
+  return `draft:${contentType}:${slug}`;
 }
 
 async function kvGetIndex(env: Env): Promise<IndexEntry[]> {
@@ -127,6 +135,58 @@ async function kvDeleteItem(env: Env, contentType: string, slug: string): Promis
   await env.CONTENT.delete(kvKey(contentType, slug));
   const index = await kvGetIndex(env);
   await kvSetIndex(
+    env,
+    index.filter((e) => !(e.type === contentType && e.slug === slug))
+  );
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Draft KV helpers (draft: prefix, _draft_index — never GitHub-synced)
+// ---------------------------------------------------------------------------
+
+async function kvGetDraftIndex(env: Env): Promise<IndexEntry[]> {
+  const raw = await env.CONTENT.get(KV_DRAFT_INDEX);
+  return raw ? (JSON.parse(raw) as IndexEntry[]) : [];
+}
+
+async function kvSetDraftIndex(env: Env, index: IndexEntry[]): Promise<void> {
+  await env.CONTENT.put(KV_DRAFT_INDEX, JSON.stringify(index));
+}
+
+async function kvGetDraftItem(env: Env, contentType: string, slug: string): Promise<ContentItem | null> {
+  const raw = await env.CONTENT.get(draftKvKey(contentType, slug));
+  return raw ? (JSON.parse(raw) as ContentItem) : null;
+}
+
+async function kvPutDraftItem(env: Env, item: ContentItem): Promise<void> {
+  await env.CONTENT.put(draftKvKey(item.contentType, item.slug), JSON.stringify(item));
+  const index = await kvGetDraftIndex(env);
+  const existing = index.findIndex(
+    (e) => e.type === item.contentType && e.slug === item.slug
+  );
+  const entry: IndexEntry = {
+    type: item.contentType,
+    slug: item.slug,
+    title: item.title,
+    excerpt: item.excerpt ?? null,
+    date: item.date ?? null,
+    author: item.author ?? null,
+  };
+  if (existing >= 0) {
+    index[existing] = entry;
+  } else {
+    index.push(entry);
+  }
+  await kvSetDraftIndex(env, index);
+}
+
+async function kvDeleteDraftItem(env: Env, contentType: string, slug: string): Promise<boolean> {
+  const existing = await kvGetDraftItem(env, contentType, slug);
+  if (!existing) return false;
+  await env.CONTENT.delete(draftKvKey(contentType, slug));
+  const index = await kvGetDraftIndex(env);
+  await kvSetDraftIndex(
     env,
     index.filter((e) => !(e.type === contentType && e.slug === slug))
   );
@@ -268,7 +328,10 @@ async function toolGet(
   const fromKV = await kvGetItem(env, args.contentType, args.slug);
   if (fromKV) return fromKV;
   const staticItems = await getStaticManifest(requestUrl);
-  return staticItems.find((i) => i.contentType === args.contentType && i.slug === args.slug) ?? null;
+  const fromStatic = staticItems.find((i) => i.contentType === args.contentType && i.slug === args.slug);
+  if (fromStatic) return fromStatic;
+  // Fall back to draft prefix — lets callers retrieve drafts by slug
+  return kvGetDraftItem(env, args.contentType, args.slug);
 }
 
 async function toolSearch(
@@ -295,12 +358,17 @@ async function toolCreate(
   env: Env,
   item: ContentItem,
   waitUntil: (p: Promise<unknown>) => void
-): Promise<{ path: string; githubSync: boolean }> {
+): Promise<{ path: string; githubSync: boolean; draft: boolean }> {
+  if (item.status === 'draft') {
+    await kvPutDraftItem(env, item);
+    return { path: `draft/${item.contentType}/${item.slug}.json`, githubSync: false, draft: true };
+  }
   await kvPutItem(env, item);
   waitUntil(githubCommit(env, 'upsert', item.contentType, item.slug, item).catch(() => {}));
   return {
     path: `content/${item.contentType}/${item.slug}.json`,
     githubSync: !!(env.GITHUB_TOKEN && env.GITHUB_REPO),
+    draft: false,
   };
 }
 
@@ -313,8 +381,26 @@ async function toolUpdate(
   const existing = await toolGet(env, requestUrl, { contentType: args.contentType, slug: args.slug });
   if (!existing) return null;
   const updated: ContentItem = { ...existing, ...args.updates };
-  await kvPutItem(env, updated);
-  waitUntil(githubCommit(env, 'upsert', updated.contentType, updated.slug, updated).catch(() => {}));
+  const wasDraft = existing.status === 'draft';
+  const isDraft = updated.status === 'draft';
+
+  if (wasDraft && !isDraft) {
+    // Draft → published: move to live store and sync to GitHub
+    await kvPutItem(env, updated);
+    await kvDeleteDraftItem(env, args.contentType, args.slug);
+    waitUntil(githubCommit(env, 'upsert', updated.contentType, updated.slug, updated).catch(() => {}));
+  } else if (isDraft) {
+    // Stays draft (or published → draft): update draft store only, no GitHub commit
+    await kvPutDraftItem(env, updated);
+    if (!wasDraft) {
+      await kvDeleteItem(env, args.contentType, args.slug);
+    }
+  } else {
+    // Stays published: update live store and sync to GitHub
+    await kvPutItem(env, updated);
+    waitUntil(githubCommit(env, 'upsert', updated.contentType, updated.slug, updated).catch(() => {}));
+  }
+
   return updated;
 }
 
@@ -326,8 +412,25 @@ async function toolDelete(
   const deleted = await kvDeleteItem(env, args.contentType, args.slug);
   if (deleted) {
     waitUntil(githubCommit(env, 'delete', args.contentType, args.slug).catch(() => {}));
+    return { deleted: true, githubSync: !!(env.GITHUB_TOKEN && env.GITHUB_REPO) };
   }
-  return { deleted, githubSync: !!(env.GITHUB_TOKEN && env.GITHUB_REPO) };
+  // Not in live store — check draft store (no GitHub commit for draft deletion)
+  const draftDeleted = await kvDeleteDraftItem(env, args.contentType, args.slug);
+  return { deleted: draftDeleted, githubSync: false };
+}
+
+async function toolPublish(
+  env: Env,
+  args: { contentType: string; slug: string },
+  waitUntil: (p: Promise<unknown>) => void
+): Promise<{ path: string } | null> {
+  const draft = await kvGetDraftItem(env, args.contentType, args.slug);
+  if (!draft) return null;
+  const published: ContentItem = { ...draft, status: 'published' };
+  await kvPutItem(env, published);
+  await kvDeleteDraftItem(env, args.contentType, args.slug);
+  waitUntil(githubCommit(env, 'upsert', published.contentType, published.slug, published).catch(() => {}));
+  return { path: `content/${published.contentType}/${published.slug}.json` };
 }
 
 // ---------------------------------------------------------------------------
@@ -380,7 +483,7 @@ const TOOLS = [
   },
   {
     name: 'invert_create',
-    description: 'Create a new content item. Writes to Cloudflare KV immediately and commits to GitHub asynchronously.',
+    description: 'Create a new content item. Pass status:"draft" to store in the draft KV namespace without a GitHub commit; omit or pass status:"published" to store in the live KV namespace and queue a GitHub commit.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -389,6 +492,7 @@ const TOOLS = [
         title: { type: 'string' },
         body: { type: 'string' },
         contentType: { type: 'string' },
+        status: { type: 'string', enum: ['draft', 'published'], description: '"draft" = transient, no GitHub sync; "published" (default) = live KV + GitHub sync' },
         date: { type: 'string' },
         author: { type: 'string' },
         excerpt: { type: 'string' },
@@ -402,7 +506,7 @@ const TOOLS = [
   },
   {
     name: 'invert_update',
-    description: 'Update an existing content item. Writes to KV immediately and commits to GitHub asynchronously.',
+    description: 'Update an existing content item. Changing status between "draft" and "published" moves the item between KV namespaces.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -413,6 +517,7 @@ const TOOLS = [
           properties: {
             title: { type: 'string' },
             body: { type: 'string' },
+            status: { type: 'string', enum: ['draft', 'published'] },
             date: { type: 'string' },
             author: { type: 'string' },
             excerpt: { type: 'string' },
@@ -424,6 +529,19 @@ const TOOLS = [
         },
       },
       required: ['contentType', 'slug', 'updates'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'invert_publish',
+    description: 'Promote a draft to published: moves it from the draft KV namespace to the live KV namespace, sets status to "published", and queues a GitHub commit.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        contentType: { type: 'string' },
+        slug: { type: 'string' },
+      },
+      required: ['contentType', 'slug'],
       additionalProperties: false,
     },
   },
@@ -506,7 +624,11 @@ async function dispatch(
             return ok(id, text(await toolTypes(env, requestUrl)));
           case 'invert_create': {
             const result = await toolCreate(env, args as ContentItem, waitUntil);
-            const note = result.githubSync ? ' GitHub sync queued.' : ' Warning: GITHUB_TOKEN not set — content will not survive a site rebuild.';
+            const note = result.draft
+              ? ' Draft saved — not committed to GitHub.'
+              : result.githubSync
+                ? ' GitHub sync queued.'
+                : ' Warning: GITHUB_TOKEN not set — content will not survive a site rebuild.';
             return ok(id, { content: [{ type: 'text', text: `Created: ${result.path}.${note}` }] });
           }
           case 'invert_update': {
@@ -518,6 +640,14 @@ async function dispatch(
             const result = await toolDelete(env, args as Parameters<typeof toolDelete>[2], waitUntil);
             const note = result.githubSync ? ' GitHub sync queued.' : ' Warning: GITHUB_TOKEN not set.';
             return ok(id, { content: [{ type: 'text', text: result.deleted ? `Deleted.${note}` : 'Not found.' }] });
+          }
+          case 'invert_publish': {
+            const result = await toolPublish(env, args as { contentType: string; slug: string }, waitUntil);
+            if (!result) {
+              return ok(id, { content: [{ type: 'text', text: `Draft not found: ${(args as { contentType: string; slug: string }).contentType}/${(args as { contentType: string; slug: string }).slug}` }], isError: true });
+            }
+            const note = !!(env.GITHUB_TOKEN && env.GITHUB_REPO) ? ' GitHub sync queued.' : ' Warning: GITHUB_TOKEN not set.';
+            return ok(id, { content: [{ type: 'text', text: `Published: ${result.path}.${note}` }] });
           }
           default:
             return err(id, -32601, `Unknown tool: ${name}`);
@@ -563,9 +693,12 @@ export async function GET(): Promise<Response> {
   return withCors(new Response('Method Not Allowed', { status: 405 }));
 }
 
+interface CloudflareLocals {
+  runtime?: { env: Env; ctx: { waitUntil(p: Promise<unknown>): void } };
+}
+
 export async function POST({ request, locals }: APIContext): Promise<Response> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const runtime = (locals as any).runtime as { env: Env; ctx: { waitUntil(p: Promise<unknown>): void } } | undefined;
+  const runtime = (locals as CloudflareLocals).runtime;
   if (!runtime) {
     return withCors(err(null, -32603, 'Runtime not available — ensure Cloudflare adapter is configured'));
   }

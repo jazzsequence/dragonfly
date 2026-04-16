@@ -3,7 +3,9 @@
  * Accessible at /api/mcp/info
  */
 
-export const prerender = false;
+// prerender = true when building for static hosts (e.g. GitHub Pages).
+// Set DEPLOY_TARGET=cloudflare to keep this as an SSR route.
+export const prerender = import.meta.env.DEPLOY_TARGET !== 'cloudflare';
 
 import type { APIContext } from 'astro';
 
@@ -17,9 +19,12 @@ export async function OPTIONS(): Promise<Response> {
   return new Response(null, { status: 204, headers: CORS });
 }
 
+interface CloudflareLocals {
+  runtime?: { env: Record<string, string | undefined> };
+}
+
 export async function GET({ locals }: APIContext): Promise<Response> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const env = (locals as any).runtime?.env ?? {};
+  const env = (locals as CloudflareLocals).runtime?.env ?? {};
 
   return new Response(
     JSON.stringify({
@@ -27,7 +32,7 @@ export async function GET({ locals }: APIContext): Promise<Response> {
       version: '0.1.0',
       transport: 'http',
       mcpEndpoint: '/api/mcp',
-      tools: ['invert_list', 'invert_get', 'invert_search', 'invert_types', 'invert_create', 'invert_update', 'invert_delete'],
+      tools: ['invert_list', 'invert_get', 'invert_search', 'invert_types', 'invert_create', 'invert_update', 'invert_delete', 'invert_publish'],
       writeSync: !!(env.GITHUB_TOKEN && env.GITHUB_REPO),
     }, null, 2),
     { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } }

@@ -9,49 +9,95 @@ import type { InvertContent } from '../src/adapters/interface.ts';
 // create and mutate structured content items, which the JSON adapter owns.
 const CONTENT_DIR = './content';
 
-/** List content items, optionally scoped to a single type. Paginated via limit/offset. */
-export async function invertList(
-  contentType?: string,
-  limit = 20,
-  offset = 0
+// Draft content lives here — gitignored and never deployed to Cloudflare Pages.
+// Drafts are transient: they exist locally for preview purposes only.
+// Use invert_publish to promote a draft into content/ (and into git).
+const DRAFTS_DIR = './.drafts';
+
+function contentDirForStatus(status?: 'draft' | 'published'): string {
+  return status === 'draft' ? DRAFTS_DIR : CONTENT_DIR;
+}
+
+/** Read all JSON files from a directory tree, scoped to an optional content type. */
+async function readDir(
+  baseDir: string,
+  contentType?: string
 ): Promise<InvertContent[]> {
   const all: InvertContent[] = [];
-  const typeDirs = contentType ? [contentType] : await readdir(CONTENT_DIR).catch(() => []);
+  const typeDirs = contentType
+    ? [contentType]
+    : await readdir(baseDir).catch(() => []);
 
   for (const typeDir of typeDirs) {
-    const typePath = join(CONTENT_DIR, typeDir);
+    const typePath = join(baseDir, typeDir);
     const files = await readdir(typePath).catch(() => []);
 
     for (const file of files) {
       if (extname(file) !== '.json') continue;
       try {
         const raw = await readFile(join(typePath, file), 'utf-8');
-        const data = JSON.parse(raw) as InvertContent;
-        all.push(data);
+        all.push(JSON.parse(raw) as InvertContent);
       } catch {
         // skip malformed files
       }
     }
   }
 
-  return all.slice(offset, offset + limit);
+  return all;
 }
 
-/** Get a single content item by type and slug. Returns null if not found. */
+/** Find a content item by type and slug, checking content/ then .drafts/. Returns the item and which dir it lives in. */
+async function findContent(
+  contentType: string,
+  slug: string
+): Promise<{ content: InvertContent; dir: string } | null> {
+  for (const dir of [CONTENT_DIR, DRAFTS_DIR]) {
+    try {
+      const filePath = join(dir, contentType, `${slug}.json`);
+      const raw = await readFile(filePath, 'utf-8');
+      return { content: JSON.parse(raw) as InvertContent, dir };
+    } catch {
+      // not in this dir, try next
+    }
+  }
+  return null;
+}
+
+/** List content items, optionally scoped to a single type. Paginated via limit/offset. Includes drafts. */
+export async function invertList(
+  contentType?: string,
+  limit = 20,
+  offset = 0
+): Promise<InvertContent[]> {
+  const [published, drafts] = await Promise.all([
+    readDir(CONTENT_DIR, contentType),
+    readDir(DRAFTS_DIR, contentType),
+  ]);
+
+  // Deduplicate: published wins if the same slug somehow exists in both
+  const seen = new Set<string>();
+  const merged: InvertContent[] = [];
+  for (const item of [...published, ...drafts]) {
+    const key = `${item.contentType}::${item.slug}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(item);
+    }
+  }
+
+  return merged.slice(offset, offset + limit);
+}
+
+/** Get a single content item by type and slug. Checks content/ then .drafts/. Returns null if not found. */
 export async function invertGet(
   contentType: string,
   slug: string
 ): Promise<InvertContent | null> {
-  try {
-    const filePath = join(CONTENT_DIR, contentType, `${slug}.json`);
-    const raw = await readFile(filePath, 'utf-8');
-    return JSON.parse(raw) as InvertContent;
-  } catch {
-    return null;
-  }
+  const found = await findContent(contentType, slug);
+  return found?.content ?? null;
 }
 
-/** Full-text search across title, body, and excerpt of all content. */
+/** Full-text search across title, body, and excerpt of all content (including drafts). */
 export async function invertSearch(query: string): Promise<InvertContent[]> {
   const all = await invertList(undefined, 1000);
   const q = query.toLowerCase();
@@ -63,48 +109,92 @@ export async function invertSearch(query: string): Promise<InvertContent[]> {
   );
 }
 
-/** List all content type directories present under content/. */
+/** List all content type directories present under content/ and .drafts/. */
 export async function invertTypes(): Promise<string[]> {
-  return readdir(CONTENT_DIR).catch(() => []);
+  const [published, drafts] = await Promise.all([
+    readdir(CONTENT_DIR).catch(() => [] as string[]),
+    readdir(DRAFTS_DIR).catch(() => [] as string[]),
+  ]);
+  return [...new Set([...published, ...drafts])];
 }
 
-/** Write a content item to disk as content/[type]/[slug].json. Creates the type dir if needed. */
+/** Write a content item to disk. Drafts go to .drafts/[type]/[slug].json; published go to content/. */
 export async function invertCreate(content: InvertContent): Promise<{ path: string }> {
   const { mkdir } = await import('node:fs/promises');
-  const dir = join(CONTENT_DIR, content.contentType);
-  await mkdir(dir, { recursive: true });
-  const filePath = join(dir, `${content.slug}.json`);
+  const dir = contentDirForStatus(content.status);
+  const typeDir = join(dir, content.contentType);
+  await mkdir(typeDir, { recursive: true });
+  const filePath = join(typeDir, `${content.slug}.json`);
   await writeFile(filePath, JSON.stringify(content, null, 2), 'utf-8');
   return { path: filePath };
 }
 
-/** Merge updates into an existing content item and write it back. Returns null if not found. */
+/** Merge updates into an existing content item and write it back. Returns null if not found.
+ *  If status changes (draft ↔ published), the file is moved between content/ and .drafts/. */
 export async function invertUpdate(
   contentType: string,
   slug: string,
   updates: Partial<InvertContent>
 ): Promise<InvertContent | null> {
-  const existing = await invertGet(contentType, slug);
-  if (!existing) return null;
+  const found = await findContent(contentType, slug);
+  if (!found) return null;
 
-  const updated: InvertContent = { ...existing, ...updates };
-  const filePath = join(CONTENT_DIR, contentType, `${slug}.json`);
-  await writeFile(filePath, JSON.stringify(updated, null, 2), 'utf-8');
+  const updated: InvertContent = { ...found.content, ...updates };
+  const newDir = contentDirForStatus(updated.status);
+  const newFilePath = join(newDir, contentType, `${slug}.json`);
+
+  if (newDir !== found.dir) {
+    // Status changed — move the file
+    const { mkdir } = await import('node:fs/promises');
+    await mkdir(join(newDir, contentType), { recursive: true });
+    await writeFile(newFilePath, JSON.stringify(updated, null, 2), 'utf-8');
+    await unlink(join(found.dir, contentType, `${slug}.json`));
+  } else {
+    await writeFile(newFilePath, JSON.stringify(updated, null, 2), 'utf-8');
+  }
+
   return updated;
 }
 
-/** Delete a content item from disk. Returns whether the file existed. */
+/** Delete a content item from disk. Checks content/ then .drafts/. Returns whether the file existed. */
 export async function invertDelete(
   contentType: string,
   slug: string
 ): Promise<{ deleted: boolean }> {
+  const found = await findContent(contentType, slug);
+  if (!found) return { deleted: false };
+
   try {
-    const filePath = join(CONTENT_DIR, contentType, `${slug}.json`);
-    await unlink(filePath);
+    await unlink(join(found.dir, contentType, `${slug}.json`));
     return { deleted: true };
   } catch {
     return { deleted: false };
   }
+}
+
+/** Promote a draft to published content: moves it from .drafts/ to content/ and sets status to 'published'.
+ *  Returns null if the draft does not exist. */
+export async function invertPublish(
+  contentType: string,
+  slug: string
+): Promise<{ path: string } | null> {
+  let draft: InvertContent;
+  try {
+    const filePath = join(DRAFTS_DIR, contentType, `${slug}.json`);
+    const raw = await readFile(filePath, 'utf-8');
+    draft = JSON.parse(raw) as InvertContent;
+  } catch {
+    return null;
+  }
+
+  const published: InvertContent = { ...draft, status: 'published' };
+  const { mkdir } = await import('node:fs/promises');
+  const destDir = join(CONTENT_DIR, contentType);
+  await mkdir(destDir, { recursive: true });
+  const destPath = join(destDir, `${slug}.json`);
+  await writeFile(destPath, JSON.stringify(published, null, 2), 'utf-8');
+  await unlink(join(DRAFTS_DIR, contentType, `${slug}.json`));
+  return { path: destPath };
 }
 
 // ---------------------------------------------------------------------------
@@ -202,7 +292,7 @@ function normalizeDrupal(raw: Record<string, unknown>, contentTypeOverride?: str
     slug,
     title: attrs?.title ?? slug,
     body: attrs?.body?.processed ?? attrs?.body?.value ?? '',
-    contentType: contentTypeOverride ?? derivedType || 'article',
+    contentType: contentTypeOverride ?? (derivedType || 'article'),
     date: attrs?.created,
     modified: attrs?.changed,
     excerpt: attrs?.field_summary ?? attrs?.body?.summary,
