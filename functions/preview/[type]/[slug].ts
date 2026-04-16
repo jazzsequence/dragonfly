@@ -44,6 +44,19 @@ interface PagesContext {
 // HTML helpers
 // ---------------------------------------------------------------------------
 
+async function fetchStyleLinks(requestUrl: string): Promise<string> {
+  try {
+    const homeUrl = new URL('/', requestUrl).toString();
+    const res = await fetch(homeUrl);
+    if (!res.ok) return '';
+    const html = await res.text();
+    const links = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]*>/g)];
+    return links.map((m) => m[0]).join('\n  ');
+  } catch {
+    return '';
+  }
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -52,7 +65,7 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function renderPreview(item: ContentItem, type: string): string {
+function renderPreview(item: ContentItem, type: string, styleLinks: string): string {
   const title = escapeHtml(item.title);
   return `<!doctype html>
 <html lang="en">
@@ -61,6 +74,7 @@ function renderPreview(item: ContentItem, type: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>[Draft] ${title}</title>
+  ${styleLinks}
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body { font-family: system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
@@ -89,7 +103,7 @@ function renderPreview(item: ContentItem, type: string): string {
 // Handler
 // ---------------------------------------------------------------------------
 
-export async function onRequestGet({ env, params }: PagesContext): Promise<Response> {
+export async function onRequestGet({ request, env, params }: PagesContext): Promise<Response> {
   const { type, slug } = params;
   const raw = await env.CONTENT.get(`draft:${type}:${slug}`);
 
@@ -100,8 +114,12 @@ export async function onRequestGet({ env, params }: PagesContext): Promise<Respo
     });
   }
 
-  const item = JSON.parse(raw) as ContentItem;
-  return new Response(renderPreview(item, type), {
+  const [item, styleLinks] = await Promise.all([
+    Promise.resolve(JSON.parse(raw) as ContentItem),
+    fetchStyleLinks(request.url),
+  ]);
+
+  return new Response(renderPreview(item, type, styleLinks), {
     headers: { 'Content-Type': 'text/html; charset=utf-8' },
   });
 }
