@@ -26,7 +26,10 @@ UPSTREAM_URL="${INVERT_URL:-https://github.com/jazzsequence/Invert.git}"
 UPSTREAM_BRANCH="${INVERT_BRANCH:-main}"
 SYNC_BRANCH="invert-sync-$(date +%Y%m%d)"
 
-# Core files/directories to pull from upstream
+# Core files/directories to pull from upstream.
+# These are framework internals — implementations use them but should not
+# modify them directly. UI layer (src/pages/, src/layouts/, src/components/)
+# and E2E tests are intentionally excluded: those are implementation-specific.
 CORE_PATHS=(
   src/adapters/interface.ts
   src/adapters/json.ts
@@ -34,14 +37,14 @@ CORE_PATHS=(
   src/adapters/docs.ts
   src/lib/content.ts
   src/lib/utils.ts
-  src/pages/
-  src/layouts/
-  src/components/
   mcp/tools.ts
   mcp/server.ts
-  cloudflare/
+  functions/api/mcp/
   scripts/
-  tests/
+  tests/unit/adapters/
+  tests/unit/lib/
+  tests/unit/mcp/
+  tests/unit/functions/
   .github/workflows/ci.yml
 )
 
