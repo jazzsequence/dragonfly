@@ -6,12 +6,14 @@
 #
 # What it syncs:
 #   Core framework files that Invert owns and implementations should not
-#   modify directly: adapters, content lib, MCP tools/server, edge MCP,
-#   build scripts, and the CI workflow.
+#   modify directly: adapters, content lib, MCP tools/server, Cloudflare
+#   Pages Functions (edge MCP + draft preview), and build scripts.
 #
 # What it leaves alone:
 #   src/lib/config.ts    — adapter registration (you configure this)
 #   CLAUDE.md            — project-specific AI instructions
+#   tests/               — your tests
+#   .github/workflows/   — your CI
 #   content/             — your content
 #   markdown/            — your markdown content
 #   docs/                — your docs content
@@ -28,8 +30,8 @@ SYNC_BRANCH="invert-sync-$(date +%Y%m%d)"
 
 # Core files/directories to pull from upstream.
 # These are framework internals — implementations use them but should not
-# modify them directly. UI layer (src/pages/, src/layouts/, src/components/)
-# and E2E tests are intentionally excluded: those are implementation-specific.
+# modify them directly. UI layer, tests, and CI are intentionally excluded:
+# each implementation owns those and manages them independently.
 CORE_PATHS=(
   src/adapters/interface.ts
   src/adapters/json.ts
@@ -39,13 +41,8 @@ CORE_PATHS=(
   src/lib/utils.ts
   mcp/tools.ts
   mcp/server.ts
-  functions/api/mcp/
+  functions/
   scripts/
-  tests/unit/adapters/
-  tests/unit/lib/
-  tests/unit/mcp/
-  tests/unit/functions/
-  .github/workflows/ci.yml
 )
 
 # ── Setup remote ──────────────────────────────────────────────────────────────
