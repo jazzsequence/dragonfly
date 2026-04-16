@@ -51,7 +51,7 @@ const pageTitle = title ? `${title} — ${invertConfig.siteName}` : invertConfig
   </head>
   <body>
     <header>
-      <a href={url('')} class="site-name">{invertConfig.siteName}</a>
+      <a href={url('')} class="site-name neon-text">{invertConfig.siteName}</a>
       <nav>
         {contentTypes.map((type) => (
           <a href={url(`${type}/`)}>{type}</a>
@@ -80,14 +80,16 @@ const pageTitle = title ? `${title} — ${invertConfig.siteName}` : invertConfig
   body > header .site-name {
     font-weight: 700;
     font-size: 1.25rem;
-    font-family: var(--font-heading);
-    letter-spacing: 0.03em;
+    font-family: var(--font-mono);
+    letter-spacing: -0.02em;
+    color: var(--color-cyan);
   }
   nav { display: flex; gap: 1rem; }
-  nav a { color: var(--color-muted); font-size: 0.9rem; text-transform: capitalize; transition: color 0.15s; }
-  nav a:hover { color: var(--color-accent); }
+  nav a { color: var(--color-text-sub); font-size: 0.9rem; text-transform: capitalize; transition: color 0.15s; text-decoration: none; }
+  nav a:hover { color: var(--color-cyan); }
   main { max-width: var(--content-max); margin: 0 auto; padding: var(--space-page); }
   footer {
+    background: var(--color-header-bg);
     border-top: 1px solid var(--color-border);
     padding: 1rem var(--space-page);
     color: var(--color-muted);
@@ -96,7 +98,7 @@ const pageTitle = title ? `${title} — ${invertConfig.siteName}` : invertConfig
     margin-top: 4rem;
   }
   footer a { color: var(--color-muted); }
-  footer a:hover { color: var(--color-accent); }
+  footer a:hover { color: var(--color-cyan); }
 
   /* Scrollbar (dark themed) */
   ::-webkit-scrollbar { width: 8px; height: 8px; }

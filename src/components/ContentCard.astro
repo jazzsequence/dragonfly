@@ -9,7 +9,7 @@ export interface Props {
 const { content } = Astro.props;
 ---
 
-<article class="content-card">
+<article class="content-card neon-border-hover-subtle">
   {content.featuredImage && (
     <a href={url(`${content.contentType}/${content.slug}`)}>
       <img src={content.featuredImage} alt={content.title} class="featured-image" />
@@ -28,15 +28,11 @@ const { content } = Astro.props;
 
 <style>
   .content-card {
+    background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     overflow: hidden;
     margin-bottom: 1.5rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-  .content-card:hover {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 12px rgba(0, 229, 204, 0.15);
   }
   .featured-image {
     width: 100%;

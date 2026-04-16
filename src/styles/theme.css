@@ -1,38 +1,43 @@
 /**
  * theme.css — Dragonfly dark neon theme
  *
- * Inspired by the design system at https://github.com/jazzsequence/jazz-nextjs
- * Override Invert's default light theme with a dark navy + neon palette.
+ * Design system ported from https://github.com/jazzsequence/jazz-nextjs
  */
 
 :root {
   /* ── Backgrounds ── */
-  --color-bg: #0d0d1a;
-  --color-surface: #1c1c3a;       /* code blocks, pre */
-  --color-surface-tag: #13132b;   /* chips, type badges */
-  --color-header-bg: #0a0a18;
+  --color-bg:           #0d0d1a;
+  --color-surface:      #13132b;      /* card / component backgrounds */
+  --color-surface-high: #1c1c3a;     /* elevated surfaces, code blocks */
+  --color-surface-tag:  #13132b;     /* chips, type badges (= surface) */
+  --color-header-bg:    #0a0a18;
+  --color-header:       #0a0a18;     /* alias */
 
   /* ── Text ── */
-  --color-text: #f0eeff;
-  --color-text-sub: #c4c0e0;
-  --color-muted: #a09abb;
+  --color-text:         #f0eeff;
+  --color-text-sub:     #c4c0e0;
+  --color-muted:        #a09abb;
 
   /* ── Borders ── */
-  --color-border: #2a2a4a;
+  --color-border:        #2a2a4a;
   --color-border-bright: #3d3d6b;
 
-  /* ── Accent ── */
-  --color-accent: #00e5cc;        /* cyan — primary links */
-  --color-accent-2: #00b3a0;      /* cyan hover */
+  /* ── Accents ── */
+  --color-cyan:          #00e5cc;
+  --color-magenta:       #ff2d78;
+  --color-purple:        #9d5cff;
+
+  /* legacy aliases — keep for backward compat with existing component references */
+  --color-accent:         #00e5cc;
+  --color-accent-2:       #00b3a0;
   --color-accent-magenta: #ff2d78;
-  --color-accent-purple: #9d5cff;
+  --color-accent-purple:  #9d5cff;
 
   /* ── Typography ── */
-  --font-sans: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-  --font-heading: 'Geist', 'Space Grotesk', system-ui, sans-serif;
-  --font-mono: 'Victor Mono', ui-monospace, 'Cascadia Code', monospace;
-  --font-size-base: 1.05rem;
-  --line-height-base: 1.75;
+  --font-sans:    'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --font-body:    'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Geist', 'Geist Sans', system-ui, sans-serif;
+  --font-mono:    'Victor Mono', ui-monospace, 'Cascadia Code', monospace;
 
   /* ── Radii ── */
   --radius-sm: 3px;
@@ -40,6 +45,6 @@
 
   /* ── Layout ── */
   --content-max: 860px;
-  --body-max: 720px;
-  --space-page: 2rem;
+  --body-max:    720px;
+  --space-page:  2rem;
 }

@@ -1,36 +1,474 @@
 /**
- * global.css — Base element styles for Invert
+ * global.css — Base element styles for Dragonfly / Invert
  *
+ * Ported from the jazz-nextjs design system.
  * All values reference CSS custom properties from theme.css.
- * Override the variables in theme.css, not the rules here.
  */
 
 *, *::before, *::after {
   box-sizing: border-box;
 }
 
+html {
+  color-scheme: dark;
+}
+
 body {
-  font-family: var(--font-sans);
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
+  /*
+   * Deep-dusk retrowave gradient — top is the faintest purple haze of a sky
+   * just past sunset, darkening toward near-black at the bottom.
+   * background-attachment: fixed keeps it anchored to the viewport as ambient
+   * atmosphere rather than scrolling with the page.
+   */
+  background: linear-gradient(
+    180deg,
+    #1c0d16 0%,
+    #160d18 15%,
+    #110d1a 35%,
+    #0d0d1a 70%,
+    #06060f 100%
+  );
+  background-attachment: fixed;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  line-height: 1.75;
   margin: 0;
   padding: 0;
+}
+
+h1, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
   color: var(--color-text);
-  background-color: var(--color-bg);
+  line-height: 1.3;
+}
+
+h2 {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  line-height: 1.3;
 }
 
 a {
-  color: var(--color-accent);
+  color: var(--color-cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s;
 }
 
 a:hover {
-  color: var(--color-accent-2);
+  color: var(--color-magenta);
 }
 
-pre, code {
+code, kbd, samp {
   font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: var(--color-surface-high);
+  color: var(--color-cyan);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
 }
 
-h1, h2, h3, h4, h5, h6 {
+pre {
+  font-family: var(--font-mono);
+  background: var(--color-surface-high);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 2rem 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Post / content body prose styles
+   Apply class="post-body" to the content wrapper element.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.post-body {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  line-height: 1.75;
+  color: var(--color-text-sub);
+}
+
+.post-body > * + * {
+  margin-top: 1.5rem;
+}
+
+.post-body p {
+  margin-bottom: 0;
+}
+
+.post-body h1,
+.post-body h2,
+.post-body h3,
+.post-body h4,
+.post-body h5,
+.post-body h6 {
+  color: var(--color-text);
+  line-height: 1.3;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.post-body h1,
+.post-body h3,
+.post-body h4,
+.post-body h5,
+.post-body h6 {
   font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+.post-body h2 {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.post-body h1 { font-size: 2rem; }
+.post-body h2 { font-size: 1.75rem; }
+.post-body h3 { font-size: 1.375rem; }
+.post-body h4 { font-size: 1.125rem; }
+.post-body h5,
+.post-body h6 { font-size: 1rem; }
+
+.post-body a {
+  color: var(--color-cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s;
+}
+
+.post-body a:hover {
+  color: var(--color-magenta);
+}
+
+.post-body ul,
+.post-body ol {
+  padding-left: 1.75rem;
+}
+
+.post-body ul { list-style-type: disc; }
+.post-body ol { list-style-type: decimal; }
+
+.post-body li {
+  margin-bottom: 0.375rem;
+}
+
+.post-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.post-body figure {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+.post-body figcaption {
+  margin-top: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-family: var(--font-heading);
+  color: var(--color-muted);
+  font-style: italic;
+  border-left: 2px solid var(--color-border);
+}
+
+.post-body pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+  background: var(--color-surface-high);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.post-body pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+.post-body blockquote {
+  border-left: 3px solid var(--color-purple);
+  padding: 0.75rem 1.5rem;
+  margin: 1.5rem 0;
+  background: var(--color-surface);
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.post-body blockquote p {
+  font-size: 1.125rem;
+  font-style: italic;
+  color: var(--color-text-sub);
+  margin: 0;
+}
+
+.post-body blockquote cite {
+  display: block;
+  margin-top: 0.5rem;
+  font-style: normal;
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
+
+.post-body blockquote cite::before {
+  content: "— ";
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Neon effects
+   ───────────────────────────────────────────────────────────────────────── */
+
+@keyframes neon-flicker {
+  /*
+   * Authentic neon-tube flicker: mostly stable, two irregular bursts.
+   * Burst positions at 22% and 71% (not evenly spaced). Single brief
+   * flash at 53% adds a third unpredictable event. 8s cycle, linear.
+   */
+
+  0%, 22%, 24.5%,
+  52.8%, 53.6%,
+  71%, 73.5%,
+  100% {
+    text-shadow:
+      0 0 6px var(--color-cyan),
+      0 0 14px rgba(0, 229, 204, 0.7),
+      0 0 28px rgba(0, 229, 204, 0.4);
+  }
+
+  22.3% {
+    text-shadow:
+      0 0 4px var(--color-cyan),
+      0 0 8px rgba(0, 229, 204, 0.4);
+  }
+  22.6%, 23.3% {
+    text-shadow: 0 0 2px rgba(0, 229, 204, 0.25);
+  }
+  22.9%, 23.7% {
+    text-shadow:
+      0 0 5px var(--color-cyan),
+      0 0 10px rgba(0, 229, 204, 0.5);
+  }
+  24.1% {
+    text-shadow:
+      0 0 5px var(--color-cyan),
+      0 0 11px rgba(0, 229, 204, 0.6);
+  }
+
+  53.1% {
+    text-shadow: 0 0 3px rgba(0, 229, 204, 0.3);
+  }
+  53.4% {
+    text-shadow:
+      0 0 4px var(--color-cyan),
+      0 0 9px rgba(0, 229, 204, 0.45);
+  }
+
+  71.3% {
+    text-shadow:
+      0 0 4px var(--color-cyan),
+      0 0 7px rgba(0, 229, 204, 0.35);
+  }
+  71.6%, 72.4%, 72.9% {
+    text-shadow: 0 0 2px rgba(0, 229, 204, 0.2);
+  }
+  72.0%, 72.7% {
+    text-shadow:
+      0 0 5px var(--color-cyan),
+      0 0 9px rgba(0, 229, 204, 0.45);
+  }
+  73.2% {
+    text-shadow:
+      0 0 5px var(--color-cyan),
+      0 0 12px rgba(0, 229, 204, 0.6);
+  }
+}
+
+@keyframes neon-border-flicker {
+  0%, 22%, 24.5%,
+  52.8%, 53.6%,
+  71%, 73.5%,
+  100% {
+    box-shadow:
+      0 0 0 1px var(--color-cyan),
+      0 0 8px rgba(0, 229, 204, 0.7),
+      0 0 20px rgba(0, 229, 204, 0.4),
+      inset 0 0 8px rgba(0, 229, 204, 0.05);
+    border-color: var(--color-cyan);
+  }
+
+  22.3% {
+    box-shadow: 0 0 0 1px rgba(0, 229, 204, 0.65), 0 0 5px rgba(0, 229, 204, 0.4);
+    border-color: rgba(0, 229, 204, 0.7);
+  }
+  22.6%, 23.3% {
+    box-shadow: 0 0 0 1px rgba(0, 229, 204, 0.45), 0 0 3px rgba(0, 229, 204, 0.25);
+    border-color: rgba(0, 229, 204, 0.5);
+  }
+  22.9%, 23.7% {
+    box-shadow: 0 0 0 1px rgba(0, 229, 204, 0.72), 0 0 7px rgba(0, 229, 204, 0.5);
+    border-color: rgba(0, 229, 204, 0.78);
+  }
+  24.1% {
+    box-shadow: 0 0 0 1px rgba(0, 229, 204, 0.82), 0 0 8px rgba(0, 229, 204, 0.6);
+    border-color: rgba(0, 229, 204, 0.88);
+  }
+
+  53.1% {
+    box-shadow: 0 0 0 1px rgba(0, 229, 204, 0.5), 0 0 4px rgba(0, 229, 204, 0.3);
+    border-color: rgba(0, 229, 204, 0.55);
+  }
+  53.4% {
+    box-shadow: 0 0 0 1px rgba(0, 229, 204, 0.72), 0 0 6px rgba(0, 229, 204, 0.45);
+    border-color: rgba(0, 229, 204, 0.78);
+  }
+
+  71.3% {
+    box-shadow: 0 0 0 1px rgba(0, 229, 204, 0.62), 0 0 5px rgba(0, 229, 204, 0.35);
+    border-color: rgba(0, 229, 204, 0.68);
+  }
+  71.6%, 72.4%, 72.9% {
+    box-shadow: 0 0 0 1px rgba(0, 229, 204, 0.42), 0 0 3px rgba(0, 229, 204, 0.22);
+    border-color: rgba(0, 229, 204, 0.48);
+  }
+  72.0%, 72.7% {
+    box-shadow: 0 0 0 1px rgba(0, 229, 204, 0.7), 0 0 6px rgba(0, 229, 204, 0.45);
+    border-color: rgba(0, 229, 204, 0.76);
+  }
+  73.2% {
+    box-shadow: 0 0 0 1px rgba(0, 229, 204, 0.82), 0 0 8px rgba(0, 229, 204, 0.58);
+    border-color: rgba(0, 229, 204, 0.88);
+  }
+}
+
+@keyframes neon-border-flicker-subtle {
+  0%, 22%, 24.5%,
+  52.8%, 53.6%,
+  71%, 73.5%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(157, 92, 255, 0.7),
+      0 0 8px rgba(157, 92, 255, 0.4),
+      0 0 16px rgba(157, 92, 255, 0.2),
+      inset 0 0 6px rgba(157, 92, 255, 0.04);
+    border-color: var(--color-purple);
+  }
+
+  22.3% {
+    box-shadow: 0 0 0 1px rgba(157, 92, 255, 0.55), 0 0 5px rgba(157, 92, 255, 0.3);
+    border-color: rgba(157, 92, 255, 0.6);
+  }
+  22.6%, 23.3% {
+    box-shadow: 0 0 0 1px rgba(157, 92, 255, 0.35), 0 0 3px rgba(157, 92, 255, 0.18);
+    border-color: rgba(157, 92, 255, 0.4);
+  }
+  22.9%, 23.7% {
+    box-shadow: 0 0 0 1px rgba(157, 92, 255, 0.6), 0 0 6px rgba(157, 92, 255, 0.35);
+    border-color: rgba(157, 92, 255, 0.68);
+  }
+  24.1% {
+    box-shadow: 0 0 0 1px rgba(157, 92, 255, 0.68), 0 0 7px rgba(157, 92, 255, 0.42);
+    border-color: rgba(157, 92, 255, 0.76);
+  }
+
+  53.1% {
+    box-shadow: 0 0 0 1px rgba(157, 92, 255, 0.4), 0 0 3px rgba(157, 92, 255, 0.2);
+    border-color: rgba(157, 92, 255, 0.45);
+  }
+  53.4% {
+    box-shadow: 0 0 0 1px rgba(157, 92, 255, 0.6), 0 0 5px rgba(157, 92, 255, 0.32);
+    border-color: rgba(157, 92, 255, 0.68);
+  }
+
+  71.3% {
+    box-shadow: 0 0 0 1px rgba(157, 92, 255, 0.52), 0 0 4px rgba(157, 92, 255, 0.28);
+    border-color: rgba(157, 92, 255, 0.58);
+  }
+  71.6%, 72.4%, 72.9% {
+    box-shadow: 0 0 0 1px rgba(157, 92, 255, 0.33), 0 0 3px rgba(157, 92, 255, 0.16);
+    border-color: rgba(157, 92, 255, 0.38);
+  }
+  72.0%, 72.7% {
+    box-shadow: 0 0 0 1px rgba(157, 92, 255, 0.58), 0 0 5px rgba(157, 92, 255, 0.32);
+    border-color: rgba(157, 92, 255, 0.65);
+  }
+  73.2% {
+    box-shadow: 0 0 0 1px rgba(157, 92, 255, 0.66), 0 0 7px rgba(157, 92, 255, 0.4);
+    border-color: rgba(157, 92, 255, 0.74);
+  }
+}
+
+.neon-text {
+  animation: neon-flicker 8s linear infinite;
+  text-shadow:
+    0 0 6px var(--color-cyan),
+    0 0 14px rgba(0, 229, 204, 0.7),
+    0 0 28px rgba(0, 229, 204, 0.4);
+  transition: color 0.35s ease, text-shadow 0.35s ease;
+}
+
+.neon-text:hover {
+  animation: none;
+  color: var(--color-magenta);
+  text-shadow:
+    0 0 6px var(--color-magenta),
+    0 0 16px var(--color-magenta),
+    0 0 32px rgba(255, 45, 120, 0.7),
+    0 0 60px rgba(255, 45, 120, 0.3);
+}
+
+.neon-border-hover {
+  transition: box-shadow 0.5s ease, border-color 0.5s ease;
+}
+
+.neon-border-hover:hover {
+  border-color: var(--color-cyan);
+  box-shadow:
+    0 0 0 1px var(--color-cyan),
+    0 0 8px rgba(0, 229, 204, 0.7),
+    0 0 20px rgba(0, 229, 204, 0.4),
+    inset 0 0 8px rgba(0, 229, 204, 0.05);
+  animation: neon-border-flicker 8s linear 1s infinite;
+}
+
+.neon-border-hover-subtle {
+  transition: box-shadow 0.5s ease, border-color 0.5s ease;
+}
+
+.neon-border-hover-subtle:hover {
+  border-color: var(--color-purple);
+  box-shadow:
+    0 0 0 1px rgba(157, 92, 255, 0.7),
+    0 0 8px rgba(157, 92, 255, 0.4),
+    0 0 16px rgba(157, 92, 255, 0.2),
+    inset 0 0 6px rgba(157, 92, 255, 0.04);
+  animation: neon-border-flicker-subtle 8s linear 1s infinite;
 }
